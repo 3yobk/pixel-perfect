@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Bot, Sparkles, HelpCircle, Zap, PlayCircle, PauseCircle, Wallet,
-  ArrowUpRight, ArrowDownRight, Search, Bell, User, Moon, Sun, Newspaper, ExternalLink, Menu, X,
+  ArrowUpRight, ArrowDownRight, Search, Bell, User, Moon, Sun, Newspaper, ExternalLink, Menu, X, ChevronDown,
 } from "lucide-react";
 import {
   Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Line, LineChart,
