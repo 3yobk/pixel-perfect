@@ -349,16 +349,8 @@ function TodayView({ running }: { running: boolean }) {
         </div>
 
         {/* Range selector */}
-        <div className="mt-3 flex items-center justify-center gap-1 flex-wrap">
-          {RANGES.map(r => (
-            <button
-              key={r}
-              onClick={() => { setRange(r); setHover(null); }}
-              className={`px-3 py-1.5 rounded-full text-[12px] font-semibold transition ${range === r ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted"}`}
-            >
-              {r}
-            </button>
-          ))}
+        <div className="mt-3 flex items-center justify-center">
+          <RangeTabs value={range} onChange={(r) => { setRange(r); setHover(null); }} />
         </div>
       </div>
 
