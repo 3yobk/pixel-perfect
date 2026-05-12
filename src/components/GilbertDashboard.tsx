@@ -94,7 +94,7 @@ export function GilbertDashboard() {
     <div className="min-h-screen bg-background text-foreground">
       {/* Robinhood-style top nav */}
       <header className="sticky top-0 z-30 bg-panel border-b border-border">
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 h-16 grid grid-cols-[auto_1fr_auto] items-center gap-4">
+        <div className="max-w-[1400px] mx-auto px-3 sm:px-6 h-14 sm:h-16 flex md:grid md:grid-cols-[auto_1fr_auto] items-center justify-between gap-3">
           {/* Left: Logo */}
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-[color-mix(in_oklab,var(--primary),white_25%)] flex items-center justify-center shadow-sm">
@@ -118,11 +118,9 @@ export function GilbertDashboard() {
               );
             })}
           </nav>
-          {/* Mobile spacer + search collapse */}
-          <div className="md:hidden" />
 
           {/* Right: search + actions */}
-          <div className="flex items-center gap-2 justify-end">
+          <div className="flex items-center gap-1.5 sm:gap-2 justify-end">
             <div className="relative hidden lg:block w-64">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <input
@@ -139,31 +137,39 @@ export function GilbertDashboard() {
               {running ? <PauseCircle className="w-3.5 h-3.5" /> : <PlayCircle className="w-3.5 h-3.5" />}
               {running ? "Running" : "Paused"}
             </button>
+            {/* Mobile: tiny status dot */}
+            <button
+              onClick={() => setRunning(r => !r)}
+              title={running ? "Running" : "Paused"}
+              className="sm:hidden w-8 h-8 rounded-full hover:bg-muted flex items-center justify-center"
+            >
+              <span className={`w-2.5 h-2.5 rounded-full ${running ? "bg-[var(--gain)] pulse-green" : "bg-muted-foreground"}`} />
+            </button>
             <button
               onClick={() => setDark(d => !d)}
-              className="w-9 h-9 rounded-full hover:bg-muted flex items-center justify-center text-muted-foreground"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full hover:bg-muted flex items-center justify-center text-muted-foreground"
               title={dark ? "Switch to light" : "Switch to dark"}
             >
               {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
-            <button className="w-9 h-9 rounded-full hover:bg-muted flex items-center justify-center text-muted-foreground" title="Notifications">
+            <button className="hidden sm:flex w-9 h-9 rounded-full hover:bg-muted items-center justify-center text-muted-foreground" title="Notifications">
               <Bell className="w-4 h-4" />
             </button>
-            <button className="w-9 h-9 rounded-full bg-muted hover:bg-accent flex items-center justify-center text-foreground" title="Account">
+            <button className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-muted hover:bg-accent flex items-center justify-center text-foreground" title="Account">
               <User className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* Mobile nav row */}
-        <div className="md:hidden max-w-[1400px] mx-auto px-2 flex items-center gap-1 overflow-x-auto border-t border-border">
+        {/* Mobile nav row — wraps so no horizontal scroll */}
+        <div className="md:hidden max-w-[1400px] mx-auto px-2 pb-1 flex flex-wrap items-center justify-center gap-1 border-t border-border">
           {tabs.map(t => {
             const active = tab === t.id;
             return (
               <button
                 key={t.id}
                 onClick={() => setTab(t.id)}
-                className={`px-3 py-2.5 text-[13px] font-medium whitespace-nowrap transition border-b-2 ${active ? "border-primary text-foreground" : "border-transparent text-muted-foreground"}`}
+                className={`px-2.5 py-2 text-[12px] font-medium rounded-full transition ${active ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"}`}
               >
                 {t.label}
               </button>
@@ -317,7 +323,7 @@ function TodayView({ running }: { running: boolean }) {
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard label="Open trades" tip="Trades that are still active." value={positions ? `${positions.length}` : "—"} tone="info" sub="being monitored" />
-        <StatCard label="Win rate"    tip="Percent of trades that ended profitable." value={stats ? `${stats.winRate}%` : "—"} tone="gain" sub={stats ? `${stats.totalTrades} trades` : ""} />
+        <StatCard label="Win rate"    tip="Percent of trades that ended profitable." value={stats ? `${stats.winRate.toFixed(1)}%` : "—"} tone="gain" sub={stats ? `${stats.totalTrades} trades` : ""} />
         <StatCard label="Avg win"     tip="Average dollars made on winning trades." value={stats ? `+${fmtMoney(stats.avgWin)}` : "—"} tone="gain" sub="per trade" />
         <StatCard label="Avg loss"    tip="Average dollars lost on losing trades." value={stats ? fmtMoney(stats.avgLoss) : "—"} tone="loss" sub="per trade" />
       </div>
@@ -409,35 +415,66 @@ function PositionsView() {
       {!positions ? <Skeleton className="h-40 w-full" /> : positions.length === 0 ? (
         <div className="text-center py-10 text-[13px] text-muted-foreground">No open positions for this range.</div>
       ) : (
-      <div className="overflow-x-auto">
-        <table className="w-full text-[13px]">
-          <thead>
-            <tr className="text-left text-[11px] uppercase tracking-wide text-muted-foreground border-b border-border">
-              <th className="py-2 px-2">Contract</th><th className="py-2 px-2">Side</th>
-              <th className="py-2 px-2 text-right">Entry</th><th className="py-2 px-2 text-right">Current</th>
-              <th className="py-2 px-2 text-right">P&L</th><th className="py-2 px-2 text-right">Peak</th>
-              <th className="py-2 px-2">Expiry</th><th className="py-2 px-2">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {positions.map(p => {
-              const positive = p.pnlPct >= 0;
-              return (
-                <tr key={p.contract} className="border-b border-border/60 hover:bg-accent">
-                  <td className="py-3 px-2 font-medium">{p.contract}</td>
-                  <td className="py-3 px-2"><Pill tone={p.side === "CALL" ? "gain" : "loss"}>{p.side}</Pill></td>
-                  <td className="py-3 px-2 text-right font-num">${p.entry.toFixed(2)}</td>
-                  <td className="py-3 px-2 text-right font-num">${p.current.toFixed(2)}</td>
-                  <td className={`py-3 px-2 text-right font-num font-semibold ${positive ? "text-[var(--gain)]" : "text-[var(--loss)]"}`}>{positive ? "+" : ""}{p.pnlPct.toFixed(1)}%</td>
-                  <td className="py-3 px-2 text-right font-num text-muted-foreground">{p.peakPct.toFixed(1)}%</td>
-                  <td className="py-3 px-2 text-muted-foreground">{p.expiry}</td>
-                  <td className="py-3 px-2"><Pill tone={p.status === "Near SL" ? "loss" : p.status === "Near TP" ? "gain" : "info"}>{p.status}</Pill></td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>)}
+      <>
+        {/* Mobile: card list */}
+        <div className="md:hidden space-y-2">
+          {positions.map(p => {
+            const positive = p.pnlPct >= 0;
+            return (
+              <div key={p.contract} className="rounded-xl border border-border p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-semibold text-[14px] truncate">{p.contract}</span>
+                    <Pill tone={p.side === "CALL" ? "gain" : "loss"}>{p.side}</Pill>
+                  </div>
+                  <span className={`font-num font-semibold text-[14px] ${positive ? "text-[var(--gain)]" : "text-[var(--loss)]"}`}>
+                    {positive ? "+" : ""}{p.pnlPct.toFixed(1)}%
+                  </span>
+                </div>
+                <div className="mt-2 grid grid-cols-3 gap-2 text-[11px] text-muted-foreground font-num">
+                  <div><div className="text-[10px] uppercase">Entry</div><div className="text-foreground">${p.entry.toFixed(2)}</div></div>
+                  <div><div className="text-[10px] uppercase">Now</div><div className="text-foreground">${p.current.toFixed(2)}</div></div>
+                  <div><div className="text-[10px] uppercase">Peak</div><div className="text-foreground">{p.peakPct.toFixed(1)}%</div></div>
+                </div>
+                <div className="mt-2 flex items-center justify-between text-[11px]">
+                  <span className="text-muted-foreground">Exp {p.expiry}</span>
+                  <Pill tone={p.status === "Near SL" ? "loss" : p.status === "Near TP" ? "gain" : "info"}>{p.status}</Pill>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        {/* Desktop: table */}
+        <div className="hidden md:block overflow-x-auto">
+          <table className="w-full text-[13px]">
+            <thead>
+              <tr className="text-left text-[11px] uppercase tracking-wide text-muted-foreground border-b border-border">
+                <th className="py-2 px-2">Contract</th><th className="py-2 px-2">Side</th>
+                <th className="py-2 px-2 text-right">Entry</th><th className="py-2 px-2 text-right">Current</th>
+                <th className="py-2 px-2 text-right">P&L</th><th className="py-2 px-2 text-right">Peak</th>
+                <th className="py-2 px-2">Expiry</th><th className="py-2 px-2">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {positions.map(p => {
+                const positive = p.pnlPct >= 0;
+                return (
+                  <tr key={p.contract} className="border-b border-border/60 hover:bg-accent">
+                    <td className="py-3 px-2 font-medium">{p.contract}</td>
+                    <td className="py-3 px-2"><Pill tone={p.side === "CALL" ? "gain" : "loss"}>{p.side}</Pill></td>
+                    <td className="py-3 px-2 text-right font-num">${p.entry.toFixed(2)}</td>
+                    <td className="py-3 px-2 text-right font-num">${p.current.toFixed(2)}</td>
+                    <td className={`py-3 px-2 text-right font-num font-semibold ${positive ? "text-[var(--gain)]" : "text-[var(--loss)]"}`}>{positive ? "+" : ""}{p.pnlPct.toFixed(1)}%</td>
+                    <td className="py-3 px-2 text-right font-num text-muted-foreground">{p.peakPct.toFixed(1)}%</td>
+                    <td className="py-3 px-2 text-muted-foreground">{p.expiry}</td>
+                    <td className="py-3 px-2"><Pill tone={p.status === "Near SL" ? "loss" : p.status === "Near TP" ? "gain" : "info"}>{p.status}</Pill></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </>)}
     </div>
   );
 }
@@ -467,28 +504,54 @@ function HistoryView() {
       <div className="soft-card p-5">
         <div className="flex items-center gap-2 mb-3"><h2 className="font-semibold">Closed trades</h2><Tip text="Trades Gilbert opened and then closed." /></div>
         {!trades ? <Skeleton className="h-40 w-full" /> : (
-        <div className="overflow-x-auto max-h-[600px]">
-          <table className="w-full text-[13px]">
-            <thead className="sticky top-0 bg-panel">
-              <tr className="text-left text-[11px] uppercase tracking-wide text-muted-foreground border-b border-border">
-                <th className="py-2 px-2">Time</th><th className="py-2 px-2">Ticker</th><th className="py-2 px-2">Contract</th>
-                <th className="py-2 px-2 text-right">Entry → Exit</th><th className="py-2 px-2 text-right">P&L</th><th className="py-2 px-2">Why closed</th>
-              </tr>
-            </thead>
-            <tbody>
-              {trades.map((t, i) => (
-                <tr key={i} className="border-b border-border/60 hover:bg-accent">
-                  <td className="py-2.5 px-2 text-muted-foreground font-num">{t.time}</td>
-                  <td className="py-2.5 px-2 font-medium">{t.ticker}</td>
-                  <td className="py-2.5 px-2 font-num">{t.strike} <span className="text-muted-foreground">{t.expiry}</span></td>
-                  <td className="py-2.5 px-2 text-right font-num">${t.entry.toFixed(2)} → ${t.exit.toFixed(2)}</td>
-                  <td className={`py-2.5 px-2 text-right font-num font-semibold ${t.pnl >= 0 ? "text-[var(--gain)]" : "text-[var(--loss)]"}`}>{t.pnl >= 0 ? "+" : ""}${t.pnl}</td>
-                  <td className="py-2.5 px-2"><Pill tone={t.reason.includes("Profit") ? "gain" : t.reason.includes("Stop") ? "loss" : "info"}>{t.reason}</Pill></td>
+        <>
+          {/* Mobile cards */}
+          <div className="md:hidden space-y-2 max-h-[600px] overflow-y-auto">
+            {trades.map((t, i) => (
+              <div key={i} className="rounded-xl border border-border p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-semibold text-[14px]">{t.ticker}</span>
+                    <span className="text-[11px] text-muted-foreground font-num">{t.strike} {t.expiry}</span>
+                  </div>
+                  <span className={`font-num font-semibold text-[14px] ${t.pnl >= 0 ? "text-[var(--gain)]" : "text-[var(--loss)]"}`}>
+                    {t.pnl >= 0 ? "+" : ""}${t.pnl}
+                  </span>
+                </div>
+                <div className="mt-1.5 flex items-center justify-between text-[11px] text-muted-foreground font-num">
+                  <span>${t.entry.toFixed(2)} → ${t.exit.toFixed(2)}</span>
+                  <span>{t.time}</span>
+                </div>
+                <div className="mt-2">
+                  <Pill tone={t.reason.includes("Profit") ? "gain" : t.reason.includes("Stop") ? "loss" : "info"}>{t.reason}</Pill>
+                </div>
+              </div>
+            ))}
+          </div>
+          {/* Desktop table */}
+          <div className="hidden md:block overflow-x-auto max-h-[600px]">
+            <table className="w-full text-[13px]">
+              <thead className="sticky top-0 bg-panel">
+                <tr className="text-left text-[11px] uppercase tracking-wide text-muted-foreground border-b border-border">
+                  <th className="py-2 px-2">Time</th><th className="py-2 px-2">Ticker</th><th className="py-2 px-2">Contract</th>
+                  <th className="py-2 px-2 text-right">Entry → Exit</th><th className="py-2 px-2 text-right">P&L</th><th className="py-2 px-2">Why closed</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>)}
+              </thead>
+              <tbody>
+                {trades.map((t, i) => (
+                  <tr key={i} className="border-b border-border/60 hover:bg-accent">
+                    <td className="py-2.5 px-2 text-muted-foreground font-num">{t.time}</td>
+                    <td className="py-2.5 px-2 font-medium">{t.ticker}</td>
+                    <td className="py-2.5 px-2 font-num">{t.strike} <span className="text-muted-foreground">{t.expiry}</span></td>
+                    <td className="py-2.5 px-2 text-right font-num">${t.entry.toFixed(2)} → ${t.exit.toFixed(2)}</td>
+                    <td className={`py-2.5 px-2 text-right font-num font-semibold ${t.pnl >= 0 ? "text-[var(--gain)]" : "text-[var(--loss)]"}`}>{t.pnl >= 0 ? "+" : ""}${t.pnl}</td>
+                    <td className="py-2.5 px-2"><Pill tone={t.reason.includes("Profit") ? "gain" : t.reason.includes("Stop") ? "loss" : "info"}>{t.reason}</Pill></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>)}
       </div>
     </div>
   );
