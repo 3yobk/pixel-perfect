@@ -313,9 +313,7 @@ export function GilbertDashboard() {
           >
             <div className="h-14 sm:h-16 px-4 flex items-center justify-between border-b border-border">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-[color-mix(in_oklab,var(--primary),white_25%)] flex items-center justify-center">
-                  <Bot className="w-4 h-4 text-primary-foreground" />
-                </div>
+                <GilbertLogo size={32} />
                 <span className="font-semibold">Gilbert</span>
               </div>
               <button
