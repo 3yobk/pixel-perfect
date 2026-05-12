@@ -80,40 +80,74 @@ export function GilbertDashboard() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-30 bg-panel/80 backdrop-blur border-b border-border">
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-[#7aa6ff] flex items-center justify-center shadow-sm">
-              <Bot className="w-5 h-5 text-white" />
+      {/* Robinhood-style top nav: logo + nav links + search + actions */}
+      <header className="sticky top-0 z-30 bg-panel border-b border-border">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 h-16 flex items-center gap-4 sm:gap-8">
+          {/* Logo */}
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-[#7aa6ff] flex items-center justify-center shadow-sm">
+              <Bot className="w-4 h-4 text-white" />
             </div>
-            <div>
-              <div className="font-semibold text-[15px] leading-tight">Gilbert</div>
-              <div className="text-[11px] text-muted-foreground leading-tight">Your trading assistant</div>
+            <span className="font-semibold text-[15px] hidden sm:inline">Gilbert</span>
+          </div>
+
+          {/* Nav links */}
+          <nav className="hidden md:flex items-center gap-1">
+            {tabs.map(t => {
+              const active = tab === t.id;
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => setTab(t.id)}
+                  className={`px-3 py-1.5 rounded-full text-[13px] font-medium transition ${active ? "text-foreground bg-muted" : "text-muted-foreground hover:text-foreground hover:bg-muted/60"}`}
+                >
+                  {t.label}
+                </button>
+              );
+            })}
+          </nav>
+
+          {/* Search */}
+          <div className="flex-1 max-w-md ml-auto">
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search stocks, contracts…"
+                className="w-full bg-muted/70 border-0 rounded-full pl-9 pr-3 py-2 text-[13px] placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+              />
             </div>
           </div>
-          <div className="hidden sm:flex items-center gap-2 text-[12px]">
-            <Pill tone="gain"><span className="w-1.5 h-1.5 rounded-full bg-[var(--gain)] pulse-green" /> Connected</Pill>
-            <Pill tone="info"><Shield className="w-3 h-3" /> Paper mode</Pill>
+
+          {/* Actions */}
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              onClick={() => setRunning(r => !r)}
+              title={running ? "Pause bot" : "Resume bot"}
+              className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold transition ${running ? "bg-[var(--gain-soft)] text-[var(--gain)]" : "bg-muted text-muted-foreground"}`}
+            >
+              {running ? <PauseCircle className="w-3.5 h-3.5" /> : <PlayCircle className="w-3.5 h-3.5" />}
+              {running ? "Running" : "Paused"}
+            </button>
+            <button className="w-9 h-9 rounded-full hover:bg-muted flex items-center justify-center text-muted-foreground" title="Notifications">
+              <Bell className="w-4 h-4" />
+            </button>
+            <button className="w-9 h-9 rounded-full bg-muted hover:bg-accent flex items-center justify-center text-foreground" title="Account">
+              <User className="w-4 h-4" />
+            </button>
           </div>
-          <button
-            onClick={() => setRunning(r => !r)}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[13px] font-medium transition ${running ? "bg-[var(--gain-soft)] text-[var(--gain)] hover:brightness-95" : "bg-muted text-muted-foreground hover:bg-accent"}`}
-          >
-            {running ? <PauseCircle className="w-4 h-4" /> : <PlayCircle className="w-4 h-4" />}
-            {running ? "Bot is running" : "Bot is paused"}
-          </button>
         </div>
-        <div className="max-w-[1400px] mx-auto px-2 sm:px-4 flex items-center gap-1 overflow-x-auto">
+
+        {/* Mobile nav row */}
+        <div className="md:hidden max-w-[1400px] mx-auto px-2 flex items-center gap-1 overflow-x-auto border-t border-border">
           {tabs.map(t => {
-            const Icon = t.icon;
             const active = tab === t.id;
             return (
               <button
                 key={t.id}
                 onClick={() => setTab(t.id)}
-                className={`flex items-center gap-2 px-3 sm:px-4 py-2.5 text-[13px] font-medium whitespace-nowrap transition border-b-2 ${active ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+                className={`px-3 py-2.5 text-[13px] font-medium whitespace-nowrap transition border-b-2 ${active ? "border-primary text-foreground" : "border-transparent text-muted-foreground"}`}
               >
-                <Icon className="w-4 h-4" />
                 {t.label}
               </button>
             );
@@ -128,7 +162,6 @@ export function GilbertDashboard() {
         {tab === "Insights"  && <InsightsView />}
         {tab === "Watchlist" && <WatchlistView />}
         {tab === "Activity"  && <ActivityView />}
-        {tab === "Learn"     && <LearnView />}
       </main>
     </div>
   );
