@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  Activity, Bot, CheckCircle2, Wifi, MessageSquare, AlertCircle, X,
-  Search, ChevronDown, Pause, Play, Send,
+  Activity, Bot, CheckCircle2, Wifi, MessageSquare, X, Search, Send,
 } from "lucide-react";
 import {
-  Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart,
+  Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Legend,
   Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
 import {
