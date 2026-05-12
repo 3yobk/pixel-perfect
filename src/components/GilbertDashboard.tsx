@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Bot, Sparkles, HelpCircle, Zap, PlayCircle, PauseCircle, Wallet,
-  ArrowUpRight, ArrowDownRight, Search, Bell, User, Moon, Sun, Newspaper, ExternalLink, Menu, X, ChevronDown,
+  Sparkles, HelpCircle, Zap, PlayCircle, PauseCircle, Wallet,
+  ArrowUpRight, ArrowDownRight, Search, Moon, Sun, Newspaper, ExternalLink, Menu, X, ChevronDown,
+  RefreshCw, Zap as Bolt, Send,
 } from "lucide-react";
 import {
   Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Line, LineChart,
@@ -10,8 +11,18 @@ import {
 import {
   usePortfolioSummary, usePortfolioSeries, usePositions, useRecentTrades,
   useStats, useWinRateByTicker, useExitReasons, useWatchlist, useScannerStream,
+  useBotStatus, useRegime,
 } from "@/hooks/useData";
-import type { Range } from "@/lib/provider";
+import { provider, type Range } from "@/lib/provider";
+import type { Position } from "@/lib/mockData";
+
+const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? "";
+const postSilent = (path: string, body?: unknown) =>
+  fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: body ? JSON.stringify(body) : undefined,
+  }).catch(() => null);
 
 type Tab = "Today" | "Positions" | "History" | "Insights" | "Watchlist" | "News" | "Activity";
 
@@ -267,26 +278,10 @@ export function GilbertDashboard() {
             </button>
             <GilbertLogo size={32} />
             <span className="font-semibold text-[15px] hidden sm:inline">Gilbert</span>
-            <span className="hidden sm:inline text-muted-foreground/40">/</span>
-            <span className="hidden sm:inline text-[14px] font-medium text-muted-foreground">{tab}</span>
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2">
-            <button
-              onClick={() => setRunning(r => !r)}
-              title={running ? "Pause bot" : "Resume bot"}
-              className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold transition ${running ? "bg-[var(--gain-soft)] text-[var(--gain)]" : "bg-muted text-muted-foreground"}`}
-            >
-              {running ? <PauseCircle className="w-3.5 h-3.5" /> : <PlayCircle className="w-3.5 h-3.5" />}
-              {running ? "Running" : "Paused"}
-            </button>
-            <button
-              onClick={() => setRunning(r => !r)}
-              title={running ? "Running" : "Paused"}
-              className="sm:hidden w-8 h-8 rounded-full hover:bg-muted flex items-center justify-center"
-            >
-              <span className={`w-2.5 h-2.5 rounded-full ${running ? "bg-[var(--gain)] pulse-green" : "bg-muted-foreground"}`} />
-            </button>
+            <BotControl running={running} setRunning={setRunning} />
             <button
               onClick={() => setDark(d => !d)}
               className="w-8 h-8 sm:w-9 sm:h-9 rounded-full hover:bg-muted flex items-center justify-center text-muted-foreground"
@@ -294,15 +289,11 @@ export function GilbertDashboard() {
             >
               {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
-            <button className="hidden sm:flex w-9 h-9 rounded-full hover:bg-muted items-center justify-center text-muted-foreground" title="Notifications">
-              <Bell className="w-4 h-4" />
-            </button>
-            <button className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-muted hover:bg-accent flex items-center justify-center text-foreground" title="Account">
-              <User className="w-4 h-4" />
-            </button>
           </div>
         </div>
       </header>
+
+      <RegimeBanner />
 
       {menuOpen && (
         <div className="fixed inset-0 z-50" onClick={() => setMenuOpen(false)}>
@@ -350,6 +341,121 @@ export function GilbertDashboard() {
         {tab === "News"      && <NewsView />}
         {tab === "Activity"  && <ActivityView />}
       </main>
+    </div>
+  );
+}
+
+/* ----------------------- BOT CONTROL + REGIME BANNER ----------------------- */
+
+function BotControl({ running, setRunning }: { running: boolean; setRunning: (fn: (r: boolean) => boolean) => void }) {
+  const status = useBotStatus(10000);
+  const [scanning, setScanning] = useState(false);
+  const [confirmClose, setConfirmClose] = useState(false);
+  const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Sync from server when available
+  useEffect(() => {
+    if (!status) return;
+    setRunning(() => !!status.running && !status.paused);
+  }, [status, setRunning]);
+
+  const toggle = () => {
+    setRunning(r => {
+      const next = !r;
+      postSilent(next ? "/api/bot/resume" : "/api/bot/pause");
+      return next;
+    });
+  };
+
+  const scan = () => {
+    setScanning(true);
+    postSilent("/api/bot/scan");
+    setTimeout(() => setScanning(false), 2000);
+  };
+
+  const closeAll = () => {
+    if (confirmClose) {
+      postSilent("/api/bot/close-all");
+      setConfirmClose(false);
+      if (confirmTimer.current) clearTimeout(confirmTimer.current);
+      return;
+    }
+    setConfirmClose(true);
+    confirmTimer.current = setTimeout(() => setConfirmClose(false), 3000);
+  };
+
+  return (
+    <>
+      {/* Mobile: dot + play/pause */}
+      <div className="flex sm:hidden items-center gap-1">
+        <span className={`w-2 h-2 rounded-full ${running ? "bg-[var(--gain)] pulse-green" : "bg-muted-foreground"}`} />
+        <button
+          onClick={toggle}
+          title={running ? "Pause" : "Resume"}
+          className="w-8 h-8 rounded-full hover:bg-muted flex items-center justify-center text-foreground"
+        >
+          {running ? <PauseCircle className="w-4 h-4" /> : <PlayCircle className="w-4 h-4" />}
+        </button>
+      </div>
+
+      {/* Desktop pill group */}
+      <div className="hidden sm:flex items-center gap-1 bg-muted/60 rounded-full p-1">
+        <span className={`ml-2 mr-1 w-2 h-2 rounded-full ${running ? "bg-[var(--gain)] pulse-green" : "bg-muted-foreground"}`} />
+        <button
+          onClick={toggle}
+          title={running ? "Pause bot" : "Resume bot"}
+          className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-semibold transition ${running ? "bg-[var(--gain-soft)] text-[var(--gain)]" : "bg-transparent text-muted-foreground hover:text-foreground"}`}
+        >
+          {running ? <PauseCircle className="w-3.5 h-3.5" /> : <PlayCircle className="w-3.5 h-3.5" />}
+          {running ? "Running" : "Paused"}
+        </button>
+        <button
+          onClick={scan}
+          title="Force scan"
+          className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-semibold text-muted-foreground hover:text-foreground transition"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${scanning ? "animate-spin" : ""}`} />
+          Scan
+        </button>
+        <button
+          onClick={closeAll}
+          title="Close all positions"
+          className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-semibold transition ${confirmClose ? "bg-[var(--loss-soft)] text-[var(--loss)]" : "text-muted-foreground hover:text-foreground"}`}
+        >
+          <Bolt className="w-3.5 h-3.5" />
+          {confirmClose ? "Confirm?" : "Close All"}
+        </button>
+      </div>
+    </>
+  );
+}
+
+function RegimeBanner() {
+  const data = useRegime(60000);
+  if (!data) return null;
+  const regime = (data.regime ?? "neutral").toLowerCase();
+  const tone =
+    regime === "bull" ? { bg: "bg-[var(--gain-soft)]", fg: "text-[var(--gain)]", label: "🟢 BULL MARKET" }
+    : regime === "bear" ? { bg: "bg-[var(--loss-soft)]", fg: "text-[var(--loss)]", label: "🔴 BEAR MARKET" }
+    : { bg: "bg-muted", fg: "text-muted-foreground", label: "⚪ NEUTRAL" };
+  const pct = typeof data.spy_vs_sma20 === "number" ? `${data.spy_vs_sma20 >= 0 ? "+" : ""}${data.spy_vs_sma20.toFixed(2)}%` : "—";
+  const parts = [
+    tone.label,
+    `SPY ${pct} vs SMA-20`,
+    `Scanner: ${data.scanner_active === false ? "idle" : "active"}`,
+    data.last_scan ? `Last scan: ${data.last_scan}` : null,
+    typeof data.open_positions === "number" ? `Open positions: ${data.open_positions}` : null,
+  ].filter(Boolean);
+  return (
+    <div className={`${tone.bg} ${tone.fg} w-full border-b border-border`} style={{ height: 28 }}>
+      <div className="max-w-[1400px] mx-auto h-full px-3 sm:px-6 flex items-center gap-2 overflow-x-auto whitespace-nowrap font-mono text-[11px]">
+        {parts.map((p, i) => (
+          <span key={i} className="flex items-center gap-2">
+            {i > 0 && <span className="opacity-50">|</span>}
+            <span>{p}</span>
+          </span>
+        ))}
+      </div>
     </div>
   );
 }
@@ -559,7 +665,56 @@ function StatCard({ label, value, tone, sub, tip }: {
 /* ------------------------------ POSITIONS ------------------------------ */
 
 function PositionsView() {
-  const { data: positions } = usePositions();
+  const { data: initial } = usePositions();
+  const [positions, setPositions] = useState<Position[] | null>(null);
+  const [flash, setFlash] = useState<Record<string, "up" | "down">>({});
+  const [confirmKey, setConfirmKey] = useState<string | null>(null);
+  const prevRef = useRef<Record<string, number>>({});
+
+  useEffect(() => { if (initial) setPositions(initial); }, [initial]);
+
+  // Live polling — try /api/positions, fall back to provider mock
+  useEffect(() => {
+    let alive = true;
+    const tick = async () => {
+      let next: Position[] | null = null;
+      try {
+        const r = await fetch(`${API_BASE}/api/positions`);
+        if (r.ok) next = await r.json();
+      } catch { /* silent */ }
+      if (!next) {
+        try { next = await provider.getPositions(); } catch { /* silent */ }
+      }
+      if (!alive || !next) return;
+      const flashes: Record<string, "up" | "down"> = {};
+      for (const p of next) {
+        const prev = prevRef.current[p.contract];
+        if (prev !== undefined && prev !== p.pnlPct) flashes[p.contract] = p.pnlPct > prev ? "up" : "down";
+        prevRef.current[p.contract] = p.pnlPct;
+      }
+      setPositions(next);
+      if (Object.keys(flashes).length) {
+        setFlash(flashes);
+        setTimeout(() => setFlash({}), 350);
+      }
+    };
+    const id = setInterval(tick, 10000);
+    return () => { alive = false; clearInterval(id); };
+  }, []);
+
+  const closeOne = (contract: string) => {
+    postSilent("/api/bot/close", { contract });
+    setPositions(prev => prev ? prev.filter(p => p.contract !== contract) : prev);
+    setConfirmKey(null);
+  };
+
+  const pnlClass = (p: Position) => {
+    const f = flash[p.contract];
+    const base = p.pnlPct >= 0 ? "text-[var(--gain)]" : "text-[var(--loss)]";
+    const flashCls = f === "up" ? "bg-[var(--gain-soft)] rounded px-1" : f === "down" ? "bg-[var(--loss-soft)] rounded px-1" : "";
+    return `${base} ${flashCls} transition-colors duration-300`;
+  };
+
   return (
     <div className="soft-card p-5">
       <div className="flex items-center gap-2 mb-1">
@@ -576,15 +731,23 @@ function PositionsView() {
           {positions.map(p => {
             const positive = p.pnlPct >= 0;
             return (
-              <div key={p.contract} className="rounded-xl border border-border p-3">
+              <div key={p.contract} className="group rounded-xl border border-border p-3 relative">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="font-semibold text-[14px] truncate">{p.contract}</span>
                     <Pill tone={p.side === "CALL" ? "gain" : "loss"}>{p.side}</Pill>
                   </div>
-                  <span className={`font-num font-semibold text-[14px] ${positive ? "text-[var(--gain)]" : "text-[var(--loss)]"}`}>
-                    {positive ? "+" : ""}{p.pnlPct.toFixed(1)}%
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className={`font-num font-semibold text-[14px] ${pnlClass(p)}`}>
+                      {positive ? "+" : ""}{p.pnlPct.toFixed(1)}%
+                    </span>
+                    <CloseBtn
+                      confirming={confirmKey === p.contract}
+                      onClick={() => confirmKey === p.contract ? closeOne(p.contract) : setConfirmKey(p.contract)}
+                      onCancel={() => setConfirmKey(null)}
+                      label={p.contract}
+                    />
+                  </div>
                 </div>
                 <div className="mt-2 grid grid-cols-3 gap-2 text-[11px] text-muted-foreground font-num">
                   <div><div className="text-[10px] uppercase">Entry</div><div className="text-foreground">${p.entry.toFixed(2)}</div></div>
@@ -608,21 +771,30 @@ function PositionsView() {
                 <th className="py-2 px-2 text-right">Entry</th><th className="py-2 px-2 text-right">Current</th>
                 <th className="py-2 px-2 text-right">P&L</th><th className="py-2 px-2 text-right">Peak</th>
                 <th className="py-2 px-2">Expiry</th><th className="py-2 px-2">Status</th>
+                <th className="py-2 px-2 w-10" />
               </tr>
             </thead>
             <tbody>
               {positions.map(p => {
                 const positive = p.pnlPct >= 0;
                 return (
-                  <tr key={p.contract} className="border-b border-border/60 hover:bg-accent">
+                  <tr key={p.contract} className="group border-b border-border/60 hover:bg-accent">
                     <td className="py-3 px-2 font-medium">{p.contract}</td>
                     <td className="py-3 px-2"><Pill tone={p.side === "CALL" ? "gain" : "loss"}>{p.side}</Pill></td>
                     <td className="py-3 px-2 text-right font-num">${p.entry.toFixed(2)}</td>
                     <td className="py-3 px-2 text-right font-num">${p.current.toFixed(2)}</td>
-                    <td className={`py-3 px-2 text-right font-num font-semibold ${positive ? "text-[var(--gain)]" : "text-[var(--loss)]"}`}>{positive ? "+" : ""}{p.pnlPct.toFixed(1)}%</td>
+                    <td className={`py-3 px-2 text-right font-num font-semibold ${pnlClass(p)}`}>{positive ? "+" : ""}{p.pnlPct.toFixed(1)}%</td>
                     <td className="py-3 px-2 text-right font-num text-muted-foreground">{p.peakPct.toFixed(1)}%</td>
                     <td className="py-3 px-2 text-muted-foreground">{p.expiry}</td>
                     <td className="py-3 px-2"><Pill tone={p.status === "Near SL" ? "loss" : p.status === "Near TP" ? "gain" : "info"}>{p.status}</Pill></td>
+                    <td className="py-2 px-2 text-right">
+                      <CloseBtn
+                        confirming={confirmKey === p.contract}
+                        onClick={() => confirmKey === p.contract ? closeOne(p.contract) : setConfirmKey(p.contract)}
+                        onCancel={() => setConfirmKey(null)}
+                        label={p.contract}
+                      />
+                    </td>
                   </tr>
                 );
               })}
@@ -631,6 +803,27 @@ function PositionsView() {
         </div>
       </>)}
     </div>
+  );
+}
+
+function CloseBtn({ confirming, onClick, onCancel, label }: { confirming: boolean; onClick: () => void; onCancel: () => void; label: string }) {
+  if (confirming) {
+    return (
+      <span className="inline-flex items-center gap-1 text-[11px]">
+        <span className="text-muted-foreground hidden sm:inline">Close {label}?</span>
+        <button onClick={onClick} className="px-2 py-0.5 rounded-md bg-[var(--loss)] text-white font-semibold">Yes</button>
+        <button onClick={onCancel} className="px-2 py-0.5 rounded-md hover:bg-muted text-muted-foreground">No</button>
+      </span>
+    );
+  }
+  return (
+    <button
+      onClick={onClick}
+      title="Close position"
+      className="opacity-0 group-hover:opacity-100 w-6 h-6 rounded-full hover:bg-[var(--loss-soft)] hover:text-[var(--loss)] text-muted-foreground inline-flex items-center justify-center transition"
+    >
+      <X className="w-3.5 h-3.5" />
+    </button>
   );
 }
 
@@ -838,25 +1031,116 @@ function WatchlistView() {
 function ActivityView() {
   const feed = useScannerStream(40);
   return (
-    <div className="soft-card p-5">
-      <div className="flex items-center gap-2 mb-1">
-        <h2 className="font-semibold">Live scanner</h2>
-        <Pill tone="gain"><span className="w-1.5 h-1.5 rounded-full bg-[var(--gain)] pulse-green" /> Live</Pill>
-        <Tip text="Every few seconds Gilbert checks the market. Each row is its decision on a stock." />
+    <div className="space-y-6">
+      <div className="soft-card p-5">
+        <div className="flex items-center gap-2 mb-1">
+          <h2 className="font-semibold">Live scanner</h2>
+          <Pill tone="gain"><span className="w-1.5 h-1.5 rounded-full bg-[var(--gain)] pulse-green" /> Live</Pill>
+          <Tip text="Every few seconds Gilbert checks the market. Each row is its decision on a stock." />
+        </div>
+        <p className="text-[12px] text-muted-foreground mb-4">Most checks are skipped — that's normal. Gilbert only trades when conditions are great.</p>
+        <div className="space-y-1.5 pr-1">
+          {feed.map((e, i) => (
+            <div key={e.id} className={`flex items-center gap-3 px-3 py-2 rounded-lg border border-border/70 text-[13px] ${i === 0 ? "flash-row" : ""}`}>
+              <span className="text-[11px] text-muted-foreground font-num w-20 shrink-0">{e.time}</span>
+              <span className="font-semibold w-14 shrink-0">{e.ticker}</span>
+              <span className="text-muted-foreground flex-1 truncate">{e.detail}</span>
+              <Pill tone={e.kind === "signal" ? "gain" : e.kind === "blocked" ? "warn" : "muted"}>
+                {e.kind === "signal" ? "Trade" : e.kind === "blocked" ? "Blocked" : "Skipped"}
+              </Pill>
+            </div>
+          ))}
+        </div>
       </div>
-      <p className="text-[12px] text-muted-foreground mb-4">Most checks are skipped — that's normal. Gilbert only trades when conditions are great.</p>
-      <div className="space-y-1.5 pr-1">
-        {feed.map((e, i) => (
-          <div key={e.id} className={`flex items-center gap-3 px-3 py-2 rounded-lg border border-border/70 text-[13px] ${i === 0 ? "flash-row" : ""}`}>
-            <span className="text-[11px] text-muted-foreground font-num w-20 shrink-0">{e.time}</span>
-            <span className="font-semibold w-14 shrink-0">{e.ticker}</span>
-            <span className="text-muted-foreground flex-1 truncate">{e.detail}</span>
-            <Pill tone={e.kind === "signal" ? "gain" : e.kind === "blocked" ? "warn" : "muted"}>
-              {e.kind === "signal" ? "Trade" : e.kind === "blocked" ? "Blocked" : "Skipped"}
-            </Pill>
+      <DiscordTerminal />
+    </div>
+  );
+}
+
+const COMMANDS = ["!status", "!scan", "!pause", "!resume", "!close ALL", "!watchlist", "!help"];
+
+function DiscordTerminal() {
+  type Entry = { ts: string; cmd: string; resp: string };
+  const [log, setLog] = useState<Entry[]>([]);
+  const [input, setInput] = useState("");
+  const showSuggest = input.startsWith("!");
+  const filtered = COMMANDS.filter(c => c.startsWith(input));
+
+  const send = async (raw?: string) => {
+    const cmd = (raw ?? input).trim();
+    if (!cmd) return;
+    const ts = new Date().toLocaleTimeString("en-US", { hour12: false });
+    setInput("");
+    let resp = "Sent.";
+    try {
+      const r = await fetch(`${API_BASE}/api/bot/command`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ command: cmd }),
+      });
+      if (r.ok) {
+        const data = await r.json().catch(() => null);
+        resp = data?.response ?? data?.message ?? "ok";
+      } else {
+        resp = "(no response)";
+      }
+    } catch {
+      resp = "(offline)";
+    }
+    setLog(prev => [...prev.slice(-9), { ts, cmd, resp }]);
+  };
+
+  return (
+    <div className="soft-card p-5">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Discord Commands</h3>
+        <span className="text-[10px] text-muted-foreground">{log.length}/10</span>
+      </div>
+      <div className="rounded-lg bg-muted/40 border border-border p-3 h-44 overflow-y-auto font-mono text-[12px] space-y-2">
+        {log.length === 0 ? (
+          <div className="text-muted-foreground text-[11px]">Type a command below. Try !help</div>
+        ) : log.slice(-5).map((e, i) => (
+          <div key={i}>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-muted-foreground">{e.ts}</span>
+              <span className="text-foreground">{e.cmd}</span>
+            </div>
+            <div className="text-muted-foreground pl-4">→ {e.resp}</div>
           </div>
         ))}
       </div>
+      <form
+        onSubmit={(e) => { e.preventDefault(); send(); }}
+        className="relative mt-3 flex items-center gap-2"
+      >
+        {showSuggest && filtered.length > 0 && (
+          <div className="absolute bottom-full mb-2 left-0 soft-card p-1 w-56 z-10">
+            {filtered.map(c => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => { setInput(c); }}
+                className="w-full text-left px-3 py-1.5 rounded-md text-[12px] font-mono hover:bg-muted text-foreground"
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+        )}
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="!command"
+          className="flex-1 bg-muted/70 border-0 rounded-full px-4 py-2 text-[13px] font-mono placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+        />
+        <button
+          type="submit"
+          disabled={!input.trim()}
+          className="px-4 py-2 rounded-full bg-primary text-primary-foreground text-[12px] font-semibold inline-flex items-center gap-1.5 disabled:opacity-50"
+        >
+          <Send className="w-3.5 h-3.5" /> Send
+        </button>
+      </form>
     </div>
   );
 }
@@ -919,7 +1203,7 @@ function NewsView() {
           <h2 className="font-semibold text-lg flex items-center gap-2">
             <Newspaper className="w-5 h-5 text-primary" /> Live news
           </h2>
-          <p className="text-[12px] text-muted-foreground">Fresh market headlines, powered by Finnhub.</p>
+          <p className="text-[12px] text-muted-foreground">Fresh market headlines.</p>
         </div>
         <form
           onSubmit={(e) => {
