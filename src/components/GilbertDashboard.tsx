@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Bot, Sparkles, HelpCircle, Zap, PlayCircle, PauseCircle, Wallet,
-  ArrowUpRight, ArrowDownRight, Search, Bell, User, Moon, Sun, Newspaper, ExternalLink, Menu, X,
+  ArrowUpRight, ArrowDownRight, Search, Bell, User, Moon, Sun, Newspaper, ExternalLink, Menu, X, ChevronDown,
 } from "lucide-react";
 import {
   Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Line, LineChart,
@@ -25,20 +25,57 @@ const tabs: { id: Tab; label: string }[] = [
   { id: "Activity",  label: "Activity" },
 ];
 
-const RANGES: Range[] = ["1D", "1W", "1M", "3M", "6M", "1Y", "ALL"];
+const QUICK_RANGES: Range[] = ["1D", "1W", "1M", "1Y"];
+const CUSTOM_RANGES: Range[] = ["3M", "6M", "ALL"];
 
 function RangeTabs({ value, onChange, className = "" }: { value: Range; onChange: (r: Range) => void; className?: string }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const isCustom = (CUSTOM_RANGES as Range[]).includes(value);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+
   return (
-    <div className={`inline-flex items-center gap-0.5 bg-muted/60 rounded-full p-1 ${className}`}>
-      {RANGES.map(r => (
+    <div ref={wrapRef} className={`relative inline-flex items-center gap-0.5 bg-muted/60 rounded-full p-1 ${className}`}>
+      {QUICK_RANGES.map(r => (
         <button
           key={r}
-          onClick={() => onChange(r)}
+          onClick={() => { onChange(r); setOpen(false); }}
           className={`px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-[12px] font-semibold transition ${value === r ? "bg-foreground text-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
         >
           {r}
         </button>
       ))}
+      <button
+        onClick={() => setOpen(o => !o)}
+        className={`inline-flex items-center gap-1 px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-[12px] font-semibold transition ${isCustom ? "bg-foreground text-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+      >
+        {isCustom ? value : "Custom"}
+        <ChevronDown className="w-3 h-3" />
+      </button>
+      {open && (
+        <div className="absolute top-full right-0 mt-2 z-40 soft-card p-2 min-w-[140px]">
+          <div className="text-[10px] uppercase tracking-wide text-muted-foreground px-2 pb-1">Custom range</div>
+          <div className="flex flex-col gap-1">
+            {CUSTOM_RANGES.map(r => (
+              <button
+                key={r}
+                onClick={() => { onChange(r); setOpen(false); }}
+                className={`text-left px-2.5 py-1.5 rounded-md text-[12px] font-semibold transition ${value === r ? "bg-foreground text-background" : "hover:bg-muted text-foreground"}`}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -312,16 +349,8 @@ function TodayView({ running }: { running: boolean }) {
         </div>
 
         {/* Range selector */}
-        <div className="mt-3 flex items-center justify-center gap-1 flex-wrap">
-          {RANGES.map(r => (
-            <button
-              key={r}
-              onClick={() => { setRange(r); setHover(null); }}
-              className={`px-3 py-1.5 rounded-full text-[12px] font-semibold transition ${range === r ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted"}`}
-            >
-              {r}
-            </button>
-          ))}
+        <div className="mt-3 flex items-center justify-center">
+          <RangeTabs value={range} onChange={(r) => { setRange(r); setHover(null); }} />
         </div>
       </div>
 
