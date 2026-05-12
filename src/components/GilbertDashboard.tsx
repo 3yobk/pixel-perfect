@@ -450,7 +450,7 @@ function PositionsView() {
           })}
         </div>
         {/* Desktop: table */}
-        <div className="hidden md:block overflow-x-auto">
+        <div className="hidden md:block">
           <table className="w-full text-[13px]">
             <thead>
               <tr className="text-left text-[11px] uppercase tracking-wide text-muted-foreground border-b border-border">
@@ -511,7 +511,7 @@ function HistoryView() {
         {!trades ? <Skeleton className="h-40 w-full" /> : (
         <>
           {/* Mobile cards */}
-          <div className="md:hidden space-y-2 max-h-[600px] overflow-y-auto">
+          <div className="md:hidden space-y-2">
             {trades.map((t, i) => (
               <div key={i} className="rounded-xl border border-border p-3">
                 <div className="flex items-center justify-between gap-2">
@@ -534,7 +534,7 @@ function HistoryView() {
             ))}
           </div>
           {/* Desktop table */}
-          <div className="hidden md:block overflow-x-auto max-h-[600px]">
+          <div className="hidden md:block">
             <table className="w-full text-[13px]">
               <thead className="sticky top-0 bg-panel">
                 <tr className="text-left text-[11px] uppercase tracking-wide text-muted-foreground border-b border-border">
@@ -695,7 +695,7 @@ function ActivityView() {
         <Tip text="Every few seconds Gilbert checks the market. Each row is its decision on a stock." />
       </div>
       <p className="text-[12px] text-muted-foreground mb-4">Most checks are skipped — that's normal. Gilbert only trades when conditions are great.</p>
-      <div className="space-y-1.5 max-h-[480px] overflow-y-auto pr-1">
+      <div className="space-y-1.5 pr-1">
         {feed.map((e, i) => (
           <div key={e.id} className={`flex items-center gap-3 px-3 py-2 rounded-lg border border-border/70 text-[13px] ${i === 0 ? "flash-row" : ""}`}>
             <span className="text-[11px] text-muted-foreground font-num w-20 shrink-0">{e.time}</span>
