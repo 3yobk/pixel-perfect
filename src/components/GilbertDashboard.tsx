@@ -25,13 +25,45 @@ const tabs: { id: Tab; label: string }[] = [
   { id: "Activity",  label: "Activity" },
 ];
 
+const FULL_RANGES: Range[] = ["1D", "1W", "1M", "3M", "6M", "1Y", "ALL"];
 const QUICK_RANGES: Range[] = ["1D", "1W", "1M", "1Y"];
 const CUSTOM_RANGES: Range[] = ["3M", "6M", "ALL"];
 
-function RangeTabs({ value, onChange, className = "" }: { value: Range; onChange: (r: Range) => void; className?: string }) {
+/** Full range bar (Today / portfolio chart) — every preset visible inline. */
+function FullRangeTabs({ value, onChange, className = "" }: { value: Range; onChange: (r: Range) => void; className?: string }) {
+  return (
+    <div className={`inline-flex items-center gap-0.5 bg-muted/60 rounded-full p-1 flex-wrap justify-center ${className}`}>
+      {FULL_RANGES.map(r => (
+        <button
+          key={r}
+          onClick={() => onChange(r)}
+          className={`px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-[12px] font-semibold transition ${value === r ? "bg-foreground text-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+        >
+          {r}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Compact range bar w/ Custom popover (dates + 3M/6M/ALL). */
+function RangeTabs({
+  value, onChange, className = "",
+  customDates, onCustomDates,
+}: {
+  value: Range;
+  onChange: (r: Range) => void;
+  className?: string;
+  customDates?: { start: string; end: string } | null;
+  onCustomDates?: (d: { start: string; end: string } | null) => void;
+}) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
-  const isCustom = (CUSTOM_RANGES as Range[]).includes(value);
+  const [start, setStart] = useState(customDates?.start ?? "");
+  const [end, setEnd] = useState(customDates?.end ?? "");
+  const isCustomRange = (CUSTOM_RANGES as Range[]).includes(value);
+  const hasCustomDates = !!customDates?.start && !!customDates?.end;
+  const isCustom = isCustomRange || hasCustomDates;
 
   useEffect(() => {
     if (!open) return;
@@ -42,40 +74,133 @@ function RangeTabs({ value, onChange, className = "" }: { value: Range; onChange
     return () => document.removeEventListener("mousedown", onDoc);
   }, [open]);
 
+  const fmtShort = (s: string) => {
+    if (!s) return "";
+    const d = new Date(s);
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  };
+  const customLabel = hasCustomDates
+    ? `${fmtShort(customDates!.start)} – ${fmtShort(customDates!.end)}`
+    : (isCustomRange ? value : "Custom");
+
+  const applyDates = () => {
+    if (!start || !end) return;
+    onCustomDates?.({ start, end });
+    setOpen(false);
+  };
+  const clearDates = () => {
+    setStart(""); setEnd("");
+    onCustomDates?.(null);
+  };
+
   return (
     <div ref={wrapRef} className={`relative inline-flex items-center gap-0.5 bg-muted/60 rounded-full p-1 ${className}`}>
       {QUICK_RANGES.map(r => (
         <button
           key={r}
-          onClick={() => { onChange(r); setOpen(false); }}
-          className={`px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-[12px] font-semibold transition ${value === r ? "bg-foreground text-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+          onClick={() => { onChange(r); onCustomDates?.(null); setOpen(false); }}
+          className={`px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-[12px] font-semibold transition ${value === r && !hasCustomDates ? "bg-foreground text-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
         >
           {r}
         </button>
       ))}
       <button
         onClick={() => setOpen(o => !o)}
-        className={`inline-flex items-center gap-1 px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-[12px] font-semibold transition ${isCustom ? "bg-foreground text-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+        className={`inline-flex items-center gap-1 px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-[12px] font-semibold transition max-w-[180px] truncate ${isCustom ? "bg-foreground text-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
       >
-        {isCustom ? value : "Custom"}
-        <ChevronDown className="w-3 h-3" />
+        <span className="truncate">{customLabel}</span>
+        <ChevronDown className="w-3 h-3 shrink-0" />
       </button>
       {open && (
-        <div className="absolute top-full right-0 mt-2 z-40 soft-card p-2 min-w-[140px]">
-          <div className="text-[10px] uppercase tracking-wide text-muted-foreground px-2 pb-1">Custom range</div>
-          <div className="flex flex-col gap-1">
-            {CUSTOM_RANGES.map(r => (
+        <div className="absolute top-full right-0 mt-2 z-40 soft-card p-3 w-[260px]">
+          <div className="text-[10px] uppercase tracking-wide text-muted-foreground pb-1">Custom dates</div>
+          <div className="flex flex-col gap-2">
+            <label className="flex items-center gap-2 text-[11px] text-muted-foreground">
+              <span className="w-10">Start</span>
+              <input
+                type="date"
+                value={start}
+                onChange={(e) => setStart(e.target.value)}
+                className="flex-1 px-2 py-1 rounded-md bg-muted border border-border text-foreground text-[12px] outline-none focus:ring-1 focus:ring-primary"
+              />
+            </label>
+            <label className="flex items-center gap-2 text-[11px] text-muted-foreground">
+              <span className="w-10">End</span>
+              <input
+                type="date"
+                value={end}
+                onChange={(e) => setEnd(e.target.value)}
+                className="flex-1 px-2 py-1 rounded-md bg-muted border border-border text-foreground text-[12px] outline-none focus:ring-1 focus:ring-primary"
+              />
+            </label>
+            <div className="flex items-center gap-2">
               <button
-                key={r}
-                onClick={() => { onChange(r); setOpen(false); }}
-                className={`text-left px-2.5 py-1.5 rounded-md text-[12px] font-semibold transition ${value === r ? "bg-foreground text-background" : "hover:bg-muted text-foreground"}`}
+                onClick={applyDates}
+                disabled={!start || !end}
+                className="flex-1 px-2 py-1.5 rounded-md text-[12px] font-semibold bg-primary text-primary-foreground disabled:opacity-50"
               >
-                {r}
+                Apply
               </button>
-            ))}
+              {hasCustomDates && (
+                <button onClick={clearDates} className="px-2 py-1.5 rounded-md text-[12px] font-semibold hover:bg-muted text-muted-foreground">
+                  Clear
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="mt-3 pt-3 border-t border-border">
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground pb-1">Quick presets</div>
+            <div className="flex flex-wrap gap-1">
+              {CUSTOM_RANGES.map(r => (
+                <button
+                  key={r}
+                  onClick={() => { onChange(r); onCustomDates?.(null); setStart(""); setEnd(""); setOpen(false); }}
+                  className={`px-2.5 py-1 rounded-md text-[12px] font-semibold transition ${value === r && !hasCustomDates ? "bg-foreground text-background" : "hover:bg-muted text-foreground"}`}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/** Creative Gilbert wordmark/logo. */
+function GilbertLogo({ size = 32 }: { size?: number }) {
+  return (
+    <div
+      className="relative rounded-xl flex items-center justify-center shadow-md"
+      style={{
+        width: size, height: size,
+        background: "linear-gradient(135deg, var(--primary), color-mix(in oklab, var(--primary), white 35%))",
+      }}
+    >
+      <svg viewBox="0 0 24 24" width={size * 0.65} height={size * 0.65} fill="none">
+        {/* Stylised G with rising candle/arrow */}
+        <path
+          d="M15 5.5a7 7 0 1 0 5 11.9V13h-5"
+          stroke="var(--primary-foreground)"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M8 16.5l2.5-3 2 2L16 11"
+          stroke="var(--primary-foreground)"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          opacity="0.85"
+        />
+        <circle cx="16" cy="11" r="1.1" fill="var(--primary-foreground)" />
+      </svg>
+      <span
+        className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full"
+        style={{ background: "var(--gain)", boxShadow: "0 0 0 2px var(--panel)" }}
+      />
     </div>
   );
 }
