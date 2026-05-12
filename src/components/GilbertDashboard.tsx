@@ -431,23 +431,31 @@ function PositionsView() {
 /* ------------------------------ HISTORY ------------------------------ */
 
 function HistoryView() {
-  const { data: trades } = useRecentTrades();
+  const [range, setRange] = useState<Range>("1D");
+  const { data: trades } = useRecentTrades(range);
   const wins = trades ? trades.filter(t => t.pnl > 0).length : 0;
   const losses = trades ? trades.length - wins : 0;
   const net = trades ? trades.reduce((s, t) => s + t.pnl, 0) : 0;
   return (
     <div className="space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h2 className="font-semibold text-lg">History</h2>
+          <p className="text-[12px] text-muted-foreground">{labelFor(range)} · {trades?.length ?? 0} trades</p>
+        </div>
+        <RangeTabs value={range} onChange={setRange} />
+      </div>
       <div className="grid grid-cols-3 gap-3">
-        <div className="soft-card p-4"><div className="text-[12px] text-muted-foreground">Wins today</div><div className="text-2xl font-semibold text-[var(--gain)] font-num">{wins}</div></div>
-        <div className="soft-card p-4"><div className="text-[12px] text-muted-foreground">Losses today</div><div className="text-2xl font-semibold text-[var(--loss)] font-num">{losses}</div></div>
-        <div className="soft-card p-4"><div className="text-[12px] text-muted-foreground">Net</div><div className="text-2xl font-semibold font-num">{fmtMoney(net)}</div></div>
+        <div className="soft-card p-4"><div className="text-[12px] text-muted-foreground">Wins</div><div className="text-2xl font-semibold text-[var(--gain)] font-num">{wins}</div></div>
+        <div className="soft-card p-4"><div className="text-[12px] text-muted-foreground">Losses</div><div className="text-2xl font-semibold text-[var(--loss)] font-num">{losses}</div></div>
+        <div className="soft-card p-4"><div className="text-[12px] text-muted-foreground">Net</div><div className={`text-2xl font-semibold font-num ${net >= 0 ? "text-[var(--gain)]" : "text-[var(--loss)]"}`}>{fmtMoney(net)}</div></div>
       </div>
       <div className="soft-card p-5">
-        <div className="flex items-center gap-2 mb-3"><h2 className="font-semibold">Recently closed trades</h2><Tip text="Trades Gilbert opened and closed today." /></div>
+        <div className="flex items-center gap-2 mb-3"><h2 className="font-semibold">Closed trades</h2><Tip text="Trades Gilbert opened and then closed." /></div>
         {!trades ? <Skeleton className="h-40 w-full" /> : (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto max-h-[600px]">
           <table className="w-full text-[13px]">
-            <thead>
+            <thead className="sticky top-0 bg-panel">
               <tr className="text-left text-[11px] uppercase tracking-wide text-muted-foreground border-b border-border">
                 <th className="py-2 px-2">Time</th><th className="py-2 px-2">Ticker</th><th className="py-2 px-2">Contract</th>
                 <th className="py-2 px-2 text-right">Entry → Exit</th><th className="py-2 px-2 text-right">P&L</th><th className="py-2 px-2">Why closed</th>
