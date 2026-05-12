@@ -77,22 +77,34 @@ function Skeleton({ className = "" }: { className?: string }) {
 export function GilbertDashboard() {
   const [tab, setTab] = useState<Tab>("Today");
   const [running, setRunning] = useState(true);
+  const [dark, setDark] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    const saved = localStorage.getItem("gilbert-theme");
+    if (saved) return saved === "dark";
+    return window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false;
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.toggle("dark", dark);
+    localStorage.setItem("gilbert-theme", dark ? "dark" : "light");
+  }, [dark]);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* Robinhood-style top nav: logo + nav links + search + actions */}
+      {/* Robinhood-style top nav */}
       <header className="sticky top-0 z-30 bg-panel border-b border-border">
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 h-16 flex items-center gap-4 sm:gap-8">
-          {/* Logo */}
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-[#7aa6ff] flex items-center justify-center shadow-sm">
-              <Bot className="w-4 h-4 text-white" />
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 h-16 grid grid-cols-[auto_1fr_auto] items-center gap-4">
+          {/* Left: Logo */}
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-[color-mix(in_oklab,var(--primary),white_25%)] flex items-center justify-center shadow-sm">
+              <Bot className="w-4 h-4 text-primary-foreground" />
             </div>
             <span className="font-semibold text-[15px] hidden sm:inline">Gilbert</span>
           </div>
 
-          {/* Nav links */}
-          <nav className="hidden md:flex items-center gap-1">
+          {/* Center: nav links (desktop) */}
+          <nav className="hidden md:flex items-center justify-center gap-1">
             {tabs.map(t => {
               const active = tab === t.id;
               return (
@@ -106,21 +118,19 @@ export function GilbertDashboard() {
               );
             })}
           </nav>
+          {/* Mobile spacer + search collapse */}
+          <div className="md:hidden" />
 
-          {/* Search */}
-          <div className="flex-1 max-w-md ml-auto">
-            <div className="relative">
+          {/* Right: search + actions */}
+          <div className="flex items-center gap-2 justify-end">
+            <div className="relative hidden lg:block w-64">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <input
                 type="text"
-                placeholder="Search stocks, contracts…"
+                placeholder="Search…"
                 className="w-full bg-muted/70 border-0 rounded-full pl-9 pr-3 py-2 text-[13px] placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
               />
             </div>
-          </div>
-
-          {/* Actions */}
-          <div className="flex items-center gap-1 shrink-0">
             <button
               onClick={() => setRunning(r => !r)}
               title={running ? "Pause bot" : "Resume bot"}
@@ -128,6 +138,13 @@ export function GilbertDashboard() {
             >
               {running ? <PauseCircle className="w-3.5 h-3.5" /> : <PlayCircle className="w-3.5 h-3.5" />}
               {running ? "Running" : "Paused"}
+            </button>
+            <button
+              onClick={() => setDark(d => !d)}
+              className="w-9 h-9 rounded-full hover:bg-muted flex items-center justify-center text-muted-foreground"
+              title={dark ? "Switch to light" : "Switch to dark"}
+            >
+              {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
             <button className="w-9 h-9 rounded-full hover:bg-muted flex items-center justify-center text-muted-foreground" title="Notifications">
               <Bell className="w-4 h-4" />
@@ -161,6 +178,7 @@ export function GilbertDashboard() {
         {tab === "History"   && <HistoryView />}
         {tab === "Insights"  && <InsightsView />}
         {tab === "Watchlist" && <WatchlistView />}
+        {tab === "News"      && <NewsView />}
         {tab === "Activity"  && <ActivityView />}
       </main>
     </div>
