@@ -278,26 +278,10 @@ export function GilbertDashboard() {
             </button>
             <GilbertLogo size={32} />
             <span className="font-semibold text-[15px] hidden sm:inline">Gilbert</span>
-            <span className="hidden sm:inline text-muted-foreground/40">/</span>
-            <span className="hidden sm:inline text-[14px] font-medium text-muted-foreground">{tab}</span>
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2">
-            <button
-              onClick={() => setRunning(r => !r)}
-              title={running ? "Pause bot" : "Resume bot"}
-              className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold transition ${running ? "bg-[var(--gain-soft)] text-[var(--gain)]" : "bg-muted text-muted-foreground"}`}
-            >
-              {running ? <PauseCircle className="w-3.5 h-3.5" /> : <PlayCircle className="w-3.5 h-3.5" />}
-              {running ? "Running" : "Paused"}
-            </button>
-            <button
-              onClick={() => setRunning(r => !r)}
-              title={running ? "Running" : "Paused"}
-              className="sm:hidden w-8 h-8 rounded-full hover:bg-muted flex items-center justify-center"
-            >
-              <span className={`w-2.5 h-2.5 rounded-full ${running ? "bg-[var(--gain)] pulse-green" : "bg-muted-foreground"}`} />
-            </button>
+            <BotControl running={running} setRunning={setRunning} />
             <button
               onClick={() => setDark(d => !d)}
               className="w-8 h-8 sm:w-9 sm:h-9 rounded-full hover:bg-muted flex items-center justify-center text-muted-foreground"
@@ -305,15 +289,11 @@ export function GilbertDashboard() {
             >
               {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
-            <button className="hidden sm:flex w-9 h-9 rounded-full hover:bg-muted items-center justify-center text-muted-foreground" title="Notifications">
-              <Bell className="w-4 h-4" />
-            </button>
-            <button className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-muted hover:bg-accent flex items-center justify-center text-foreground" title="Account">
-              <User className="w-4 h-4" />
-            </button>
           </div>
         </div>
       </header>
+
+      <RegimeBanner />
 
       {menuOpen && (
         <div className="fixed inset-0 z-50" onClick={() => setMenuOpen(false)}>
@@ -361,6 +341,121 @@ export function GilbertDashboard() {
         {tab === "News"      && <NewsView />}
         {tab === "Activity"  && <ActivityView />}
       </main>
+    </div>
+  );
+}
+
+/* ----------------------- BOT CONTROL + REGIME BANNER ----------------------- */
+
+function BotControl({ running, setRunning }: { running: boolean; setRunning: (fn: (r: boolean) => boolean) => void }) {
+  const status = useBotStatus(10000);
+  const [scanning, setScanning] = useState(false);
+  const [confirmClose, setConfirmClose] = useState(false);
+  const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Sync from server when available
+  useEffect(() => {
+    if (!status) return;
+    setRunning(() => !!status.running && !status.paused);
+  }, [status, setRunning]);
+
+  const toggle = () => {
+    setRunning(r => {
+      const next = !r;
+      postSilent(next ? "/api/bot/resume" : "/api/bot/pause");
+      return next;
+    });
+  };
+
+  const scan = () => {
+    setScanning(true);
+    postSilent("/api/bot/scan");
+    setTimeout(() => setScanning(false), 2000);
+  };
+
+  const closeAll = () => {
+    if (confirmClose) {
+      postSilent("/api/bot/close-all");
+      setConfirmClose(false);
+      if (confirmTimer.current) clearTimeout(confirmTimer.current);
+      return;
+    }
+    setConfirmClose(true);
+    confirmTimer.current = setTimeout(() => setConfirmClose(false), 3000);
+  };
+
+  return (
+    <>
+      {/* Mobile: dot + play/pause */}
+      <div className="flex sm:hidden items-center gap-1">
+        <span className={`w-2 h-2 rounded-full ${running ? "bg-[var(--gain)] pulse-green" : "bg-muted-foreground"}`} />
+        <button
+          onClick={toggle}
+          title={running ? "Pause" : "Resume"}
+          className="w-8 h-8 rounded-full hover:bg-muted flex items-center justify-center text-foreground"
+        >
+          {running ? <PauseCircle className="w-4 h-4" /> : <PlayCircle className="w-4 h-4" />}
+        </button>
+      </div>
+
+      {/* Desktop pill group */}
+      <div className="hidden sm:flex items-center gap-1 bg-muted/60 rounded-full p-1">
+        <span className={`ml-2 mr-1 w-2 h-2 rounded-full ${running ? "bg-[var(--gain)] pulse-green" : "bg-muted-foreground"}`} />
+        <button
+          onClick={toggle}
+          title={running ? "Pause bot" : "Resume bot"}
+          className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-semibold transition ${running ? "bg-[var(--gain-soft)] text-[var(--gain)]" : "bg-transparent text-muted-foreground hover:text-foreground"}`}
+        >
+          {running ? <PauseCircle className="w-3.5 h-3.5" /> : <PlayCircle className="w-3.5 h-3.5" />}
+          {running ? "Running" : "Paused"}
+        </button>
+        <button
+          onClick={scan}
+          title="Force scan"
+          className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-semibold text-muted-foreground hover:text-foreground transition"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${scanning ? "animate-spin" : ""}`} />
+          Scan
+        </button>
+        <button
+          onClick={closeAll}
+          title="Close all positions"
+          className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-semibold transition ${confirmClose ? "bg-[var(--loss-soft)] text-[var(--loss)]" : "text-muted-foreground hover:text-foreground"}`}
+        >
+          <Bolt className="w-3.5 h-3.5" />
+          {confirmClose ? "Confirm?" : "Close All"}
+        </button>
+      </div>
+    </>
+  );
+}
+
+function RegimeBanner() {
+  const data = useRegime(60000);
+  if (!data) return null;
+  const regime = (data.regime ?? "neutral").toLowerCase();
+  const tone =
+    regime === "bull" ? { bg: "bg-[var(--gain-soft)]", fg: "text-[var(--gain)]", label: "🟢 BULL MARKET" }
+    : regime === "bear" ? { bg: "bg-[var(--loss-soft)]", fg: "text-[var(--loss)]", label: "🔴 BEAR MARKET" }
+    : { bg: "bg-muted", fg: "text-muted-foreground", label: "⚪ NEUTRAL" };
+  const pct = typeof data.spy_vs_sma20 === "number" ? `${data.spy_vs_sma20 >= 0 ? "+" : ""}${data.spy_vs_sma20.toFixed(2)}%` : "—";
+  const parts = [
+    tone.label,
+    `SPY ${pct} vs SMA-20`,
+    `Scanner: ${data.scanner_active === false ? "idle" : "active"}`,
+    data.last_scan ? `Last scan: ${data.last_scan}` : null,
+    typeof data.open_positions === "number" ? `Open positions: ${data.open_positions}` : null,
+  ].filter(Boolean);
+  return (
+    <div className={`${tone.bg} ${tone.fg} w-full border-b border-border`} style={{ height: 28 }}>
+      <div className="max-w-[1400px] mx-auto h-full px-3 sm:px-6 flex items-center gap-2 overflow-x-auto whitespace-nowrap font-mono text-[11px]">
+        {parts.map((p, i) => (
+          <span key={i} className="flex items-center gap-2">
+            {i > 0 && <span className="opacity-50">|</span>}
+            <span>{p}</span>
+          </span>
+        ))}
+      </div>
     </div>
   );
 }
