@@ -155,15 +155,15 @@ export function GilbertDashboard() {
           </div>
         </div>
 
-        {/* Mobile nav row */}
-        <div className="md:hidden max-w-[1400px] mx-auto px-2 flex items-center gap-1 overflow-x-auto border-t border-border">
+        {/* Mobile nav row — wraps so no horizontal scroll */}
+        <div className="md:hidden max-w-[1400px] mx-auto px-2 pb-1 flex flex-wrap items-center justify-center gap-1 border-t border-border">
           {tabs.map(t => {
             const active = tab === t.id;
             return (
               <button
                 key={t.id}
                 onClick={() => setTab(t.id)}
-                className={`px-3 py-2.5 text-[13px] font-medium whitespace-nowrap transition border-b-2 ${active ? "border-primary text-foreground" : "border-transparent text-muted-foreground"}`}
+                className={`px-2.5 py-2 text-[12px] font-medium rounded-full transition ${active ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"}`}
               >
                 {t.label}
               </button>
