@@ -504,28 +504,54 @@ function HistoryView() {
       <div className="soft-card p-5">
         <div className="flex items-center gap-2 mb-3"><h2 className="font-semibold">Closed trades</h2><Tip text="Trades Gilbert opened and then closed." /></div>
         {!trades ? <Skeleton className="h-40 w-full" /> : (
-        <div className="overflow-x-auto max-h-[600px]">
-          <table className="w-full text-[13px]">
-            <thead className="sticky top-0 bg-panel">
-              <tr className="text-left text-[11px] uppercase tracking-wide text-muted-foreground border-b border-border">
-                <th className="py-2 px-2">Time</th><th className="py-2 px-2">Ticker</th><th className="py-2 px-2">Contract</th>
-                <th className="py-2 px-2 text-right">Entry → Exit</th><th className="py-2 px-2 text-right">P&L</th><th className="py-2 px-2">Why closed</th>
-              </tr>
-            </thead>
-            <tbody>
-              {trades.map((t, i) => (
-                <tr key={i} className="border-b border-border/60 hover:bg-accent">
-                  <td className="py-2.5 px-2 text-muted-foreground font-num">{t.time}</td>
-                  <td className="py-2.5 px-2 font-medium">{t.ticker}</td>
-                  <td className="py-2.5 px-2 font-num">{t.strike} <span className="text-muted-foreground">{t.expiry}</span></td>
-                  <td className="py-2.5 px-2 text-right font-num">${t.entry.toFixed(2)} → ${t.exit.toFixed(2)}</td>
-                  <td className={`py-2.5 px-2 text-right font-num font-semibold ${t.pnl >= 0 ? "text-[var(--gain)]" : "text-[var(--loss)]"}`}>{t.pnl >= 0 ? "+" : ""}${t.pnl}</td>
-                  <td className="py-2.5 px-2"><Pill tone={t.reason.includes("Profit") ? "gain" : t.reason.includes("Stop") ? "loss" : "info"}>{t.reason}</Pill></td>
+        <>
+          {/* Mobile cards */}
+          <div className="md:hidden space-y-2 max-h-[600px] overflow-y-auto">
+            {trades.map((t, i) => (
+              <div key={i} className="rounded-xl border border-border p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-semibold text-[14px]">{t.ticker}</span>
+                    <span className="text-[11px] text-muted-foreground font-num">{t.strike} {t.expiry}</span>
+                  </div>
+                  <span className={`font-num font-semibold text-[14px] ${t.pnl >= 0 ? "text-[var(--gain)]" : "text-[var(--loss)]"}`}>
+                    {t.pnl >= 0 ? "+" : ""}${t.pnl}
+                  </span>
+                </div>
+                <div className="mt-1.5 flex items-center justify-between text-[11px] text-muted-foreground font-num">
+                  <span>${t.entry.toFixed(2)} → ${t.exit.toFixed(2)}</span>
+                  <span>{t.time}</span>
+                </div>
+                <div className="mt-2">
+                  <Pill tone={t.reason.includes("Profit") ? "gain" : t.reason.includes("Stop") ? "loss" : "info"}>{t.reason}</Pill>
+                </div>
+              </div>
+            ))}
+          </div>
+          {/* Desktop table */}
+          <div className="hidden md:block overflow-x-auto max-h-[600px]">
+            <table className="w-full text-[13px]">
+              <thead className="sticky top-0 bg-panel">
+                <tr className="text-left text-[11px] uppercase tracking-wide text-muted-foreground border-b border-border">
+                  <th className="py-2 px-2">Time</th><th className="py-2 px-2">Ticker</th><th className="py-2 px-2">Contract</th>
+                  <th className="py-2 px-2 text-right">Entry → Exit</th><th className="py-2 px-2 text-right">P&L</th><th className="py-2 px-2">Why closed</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>)}
+              </thead>
+              <tbody>
+                {trades.map((t, i) => (
+                  <tr key={i} className="border-b border-border/60 hover:bg-accent">
+                    <td className="py-2.5 px-2 text-muted-foreground font-num">{t.time}</td>
+                    <td className="py-2.5 px-2 font-medium">{t.ticker}</td>
+                    <td className="py-2.5 px-2 font-num">{t.strike} <span className="text-muted-foreground">{t.expiry}</span></td>
+                    <td className="py-2.5 px-2 text-right font-num">${t.entry.toFixed(2)} → ${t.exit.toFixed(2)}</td>
+                    <td className={`py-2.5 px-2 text-right font-num font-semibold ${t.pnl >= 0 ? "text-[var(--gain)]" : "text-[var(--loss)]"}`}>{t.pnl >= 0 ? "+" : ""}${t.pnl}</td>
+                    <td className="py-2.5 px-2"><Pill tone={t.reason.includes("Profit") ? "gain" : t.reason.includes("Stop") ? "loss" : "info"}>{t.reason}</Pill></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>)}
       </div>
     </div>
   );
