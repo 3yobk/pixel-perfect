@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import {
-  Activity, Bot, Sparkles, TrendingUp, TrendingDown, HelpCircle, BookOpen,
-  Zap, Shield, Target, Clock, PlayCircle, PauseCircle, Eye, Wallet, ArrowUpRight, ArrowDownRight,
+  Bot, Sparkles, HelpCircle, Zap, PlayCircle, PauseCircle, Wallet,
+  ArrowUpRight, ArrowDownRight, Search, Bell, User,
 } from "lucide-react";
 import {
   Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Line, LineChart,
@@ -13,19 +13,34 @@ import {
 } from "@/hooks/useData";
 import type { Range } from "@/lib/provider";
 
-type Tab = "Today" | "Positions" | "History" | "Insights" | "Watchlist" | "Activity" | "Learn";
+type Tab = "Today" | "Positions" | "History" | "Insights" | "Watchlist" | "Activity";
 
-const tabs: { id: Tab; label: string; icon: typeof Activity }[] = [
-  { id: "Today",     label: "Today",     icon: Sparkles },
-  { id: "Positions", label: "Positions", icon: Target },
-  { id: "History",   label: "History",   icon: Clock },
-  { id: "Insights",  label: "Insights",  icon: TrendingUp },
-  { id: "Watchlist", label: "Watchlist", icon: Eye },
-  { id: "Activity",  label: "Activity",  icon: Activity },
-  { id: "Learn",     label: "Learn",     icon: BookOpen },
+const tabs: { id: Tab; label: string }[] = [
+  { id: "Today",     label: "Today" },
+  { id: "Positions", label: "Positions" },
+  { id: "History",   label: "History" },
+  { id: "Insights",  label: "Insights" },
+  { id: "Watchlist", label: "Watchlist" },
+  { id: "Activity",  label: "Activity" },
 ];
 
 const RANGES: Range[] = ["1D", "1W", "1M", "3M", "6M", "1Y", "ALL"];
+
+function RangeTabs({ value, onChange, className = "" }: { value: Range; onChange: (r: Range) => void; className?: string }) {
+  return (
+    <div className={`inline-flex items-center gap-0.5 bg-muted/60 rounded-full p-1 ${className}`}>
+      {RANGES.map(r => (
+        <button
+          key={r}
+          onClick={() => onChange(r)}
+          className={`px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-[12px] font-semibold transition ${value === r ? "bg-foreground text-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+        >
+          {r}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 function Tip({ text }: { text: string }) {
   return (
@@ -64,40 +79,74 @@ export function GilbertDashboard() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-30 bg-panel/80 backdrop-blur border-b border-border">
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-[#7aa6ff] flex items-center justify-center shadow-sm">
-              <Bot className="w-5 h-5 text-white" />
+      {/* Robinhood-style top nav: logo + nav links + search + actions */}
+      <header className="sticky top-0 z-30 bg-panel border-b border-border">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 h-16 flex items-center gap-4 sm:gap-8">
+          {/* Logo */}
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-[#7aa6ff] flex items-center justify-center shadow-sm">
+              <Bot className="w-4 h-4 text-white" />
             </div>
-            <div>
-              <div className="font-semibold text-[15px] leading-tight">Gilbert</div>
-              <div className="text-[11px] text-muted-foreground leading-tight">Your trading assistant</div>
+            <span className="font-semibold text-[15px] hidden sm:inline">Gilbert</span>
+          </div>
+
+          {/* Nav links */}
+          <nav className="hidden md:flex items-center gap-1">
+            {tabs.map(t => {
+              const active = tab === t.id;
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => setTab(t.id)}
+                  className={`px-3 py-1.5 rounded-full text-[13px] font-medium transition ${active ? "text-foreground bg-muted" : "text-muted-foreground hover:text-foreground hover:bg-muted/60"}`}
+                >
+                  {t.label}
+                </button>
+              );
+            })}
+          </nav>
+
+          {/* Search */}
+          <div className="flex-1 max-w-md ml-auto">
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search stocks, contracts…"
+                className="w-full bg-muted/70 border-0 rounded-full pl-9 pr-3 py-2 text-[13px] placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+              />
             </div>
           </div>
-          <div className="hidden sm:flex items-center gap-2 text-[12px]">
-            <Pill tone="gain"><span className="w-1.5 h-1.5 rounded-full bg-[var(--gain)] pulse-green" /> Connected</Pill>
-            <Pill tone="info"><Shield className="w-3 h-3" /> Paper mode</Pill>
+
+          {/* Actions */}
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              onClick={() => setRunning(r => !r)}
+              title={running ? "Pause bot" : "Resume bot"}
+              className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold transition ${running ? "bg-[var(--gain-soft)] text-[var(--gain)]" : "bg-muted text-muted-foreground"}`}
+            >
+              {running ? <PauseCircle className="w-3.5 h-3.5" /> : <PlayCircle className="w-3.5 h-3.5" />}
+              {running ? "Running" : "Paused"}
+            </button>
+            <button className="w-9 h-9 rounded-full hover:bg-muted flex items-center justify-center text-muted-foreground" title="Notifications">
+              <Bell className="w-4 h-4" />
+            </button>
+            <button className="w-9 h-9 rounded-full bg-muted hover:bg-accent flex items-center justify-center text-foreground" title="Account">
+              <User className="w-4 h-4" />
+            </button>
           </div>
-          <button
-            onClick={() => setRunning(r => !r)}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[13px] font-medium transition ${running ? "bg-[var(--gain-soft)] text-[var(--gain)] hover:brightness-95" : "bg-muted text-muted-foreground hover:bg-accent"}`}
-          >
-            {running ? <PauseCircle className="w-4 h-4" /> : <PlayCircle className="w-4 h-4" />}
-            {running ? "Bot is running" : "Bot is paused"}
-          </button>
         </div>
-        <div className="max-w-[1400px] mx-auto px-2 sm:px-4 flex items-center gap-1 overflow-x-auto">
+
+        {/* Mobile nav row */}
+        <div className="md:hidden max-w-[1400px] mx-auto px-2 flex items-center gap-1 overflow-x-auto border-t border-border">
           {tabs.map(t => {
-            const Icon = t.icon;
             const active = tab === t.id;
             return (
               <button
                 key={t.id}
                 onClick={() => setTab(t.id)}
-                className={`flex items-center gap-2 px-3 sm:px-4 py-2.5 text-[13px] font-medium whitespace-nowrap transition border-b-2 ${active ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+                className={`px-3 py-2.5 text-[13px] font-medium whitespace-nowrap transition border-b-2 ${active ? "border-primary text-foreground" : "border-transparent text-muted-foreground"}`}
               >
-                <Icon className="w-4 h-4" />
                 {t.label}
               </button>
             );
@@ -112,7 +161,6 @@ export function GilbertDashboard() {
         {tab === "Insights"  && <InsightsView />}
         {tab === "Watchlist" && <WatchlistView />}
         {tab === "Activity"  && <ActivityView />}
-        {tab === "Learn"     && <LearnView />}
       </main>
     </div>
   );
@@ -331,15 +379,21 @@ function StatCard({ label, value, tone, sub, tip }: {
 /* ------------------------------ POSITIONS ------------------------------ */
 
 function PositionsView() {
-  const { data: positions } = usePositions();
+  const [range, setRange] = useState<Range>("1D");
+  const { data: positions } = usePositions(range);
   return (
     <div className="soft-card p-5">
-      <div className="flex items-center gap-2 mb-1">
-        <h2 className="font-semibold">Open positions</h2>
-        <Tip text="Each row is a trade Gilbert has opened and is still managing." />
+      <div className="flex items-start sm:items-center gap-3 flex-col sm:flex-row sm:justify-between mb-1">
+        <div className="flex items-center gap-2">
+          <h2 className="font-semibold">Open positions</h2>
+          <Tip text="Trades Gilbert has opened and is still managing." />
+        </div>
+        <RangeTabs value={range} onChange={setRange} />
       </div>
-      <p className="text-[12px] text-muted-foreground mb-4">The bot will close these automatically when conditions are met.</p>
-      {!positions ? <Skeleton className="h-40 w-full" /> : (
+      <p className="text-[12px] text-muted-foreground mb-4">{labelFor(range)} — {positions?.length ?? 0} open</p>
+      {!positions ? <Skeleton className="h-40 w-full" /> : positions.length === 0 ? (
+        <div className="text-center py-10 text-[13px] text-muted-foreground">No open positions for this range.</div>
+      ) : (
       <div className="overflow-x-auto">
         <table className="w-full text-[13px]">
           <thead>
@@ -376,23 +430,31 @@ function PositionsView() {
 /* ------------------------------ HISTORY ------------------------------ */
 
 function HistoryView() {
-  const { data: trades } = useRecentTrades();
+  const [range, setRange] = useState<Range>("1D");
+  const { data: trades } = useRecentTrades(range);
   const wins = trades ? trades.filter(t => t.pnl > 0).length : 0;
   const losses = trades ? trades.length - wins : 0;
   const net = trades ? trades.reduce((s, t) => s + t.pnl, 0) : 0;
   return (
     <div className="space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h2 className="font-semibold text-lg">History</h2>
+          <p className="text-[12px] text-muted-foreground">{labelFor(range)} · {trades?.length ?? 0} trades</p>
+        </div>
+        <RangeTabs value={range} onChange={setRange} />
+      </div>
       <div className="grid grid-cols-3 gap-3">
-        <div className="soft-card p-4"><div className="text-[12px] text-muted-foreground">Wins today</div><div className="text-2xl font-semibold text-[var(--gain)] font-num">{wins}</div></div>
-        <div className="soft-card p-4"><div className="text-[12px] text-muted-foreground">Losses today</div><div className="text-2xl font-semibold text-[var(--loss)] font-num">{losses}</div></div>
-        <div className="soft-card p-4"><div className="text-[12px] text-muted-foreground">Net</div><div className="text-2xl font-semibold font-num">{fmtMoney(net)}</div></div>
+        <div className="soft-card p-4"><div className="text-[12px] text-muted-foreground">Wins</div><div className="text-2xl font-semibold text-[var(--gain)] font-num">{wins}</div></div>
+        <div className="soft-card p-4"><div className="text-[12px] text-muted-foreground">Losses</div><div className="text-2xl font-semibold text-[var(--loss)] font-num">{losses}</div></div>
+        <div className="soft-card p-4"><div className="text-[12px] text-muted-foreground">Net</div><div className={`text-2xl font-semibold font-num ${net >= 0 ? "text-[var(--gain)]" : "text-[var(--loss)]"}`}>{fmtMoney(net)}</div></div>
       </div>
       <div className="soft-card p-5">
-        <div className="flex items-center gap-2 mb-3"><h2 className="font-semibold">Recently closed trades</h2><Tip text="Trades Gilbert opened and closed today." /></div>
+        <div className="flex items-center gap-2 mb-3"><h2 className="font-semibold">Closed trades</h2><Tip text="Trades Gilbert opened and then closed." /></div>
         {!trades ? <Skeleton className="h-40 w-full" /> : (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto max-h-[600px]">
           <table className="w-full text-[13px]">
-            <thead>
+            <thead className="sticky top-0 bg-panel">
               <tr className="text-left text-[11px] uppercase tracking-wide text-muted-foreground border-b border-border">
                 <th className="py-2 px-2">Time</th><th className="py-2 px-2">Ticker</th><th className="py-2 px-2">Contract</th>
                 <th className="py-2 px-2 text-right">Entry → Exit</th><th className="py-2 px-2 text-right">P&L</th><th className="py-2 px-2">Why closed</th>
@@ -420,11 +482,19 @@ function HistoryView() {
 /* ------------------------------ INSIGHTS ------------------------------ */
 
 function InsightsView() {
-  const { data: winrate } = useWinRateByTicker();
-  const { data: exits } = useExitReasons();
-  const { data: stats } = useStats();
+  const [range, setRange] = useState<Range>("1M");
+  const { data: winrate } = useWinRateByTicker(range);
+  const { data: exits } = useExitReasons(range);
+  const { data: stats } = useStats(range);
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h2 className="font-semibold text-lg">Insights</h2>
+          <p className="text-[12px] text-muted-foreground">{labelFor(range)}</p>
+        </div>
+        <RangeTabs value={range} onChange={setRange} />
+      </div>
       <div className="grid lg:grid-cols-2 gap-6">
         <div className="soft-card p-5">
           <div className="flex items-center gap-2 mb-3"><h2 className="font-semibold">Win rate by ticker</h2><Tip text="How often trades on each stock end profitable." /></div>
@@ -558,33 +628,3 @@ function ActivityView() {
   );
 }
 
-/* ------------------------------- LEARN ------------------------------- */
-
-function LearnView() {
-  const items = [
-    { q: "What is RSI?", a: "RSI (Relative Strength Index) measures momentum. Below 30 = stock may be oversold (a buy signal), above 70 = overbought." },
-    { q: "What's a CALL vs a PUT?", a: "A CALL profits when a stock goes UP. A PUT profits when it goes DOWN. Gilbert picks based on the setup." },
-    { q: "What is a stop loss?", a: "A safety net — if a trade loses a set amount, it auto-closes so you can't lose more than planned." },
-    { q: "What is a profit target?", a: "The point where Gilbert auto-closes a winning trade to lock in gains." },
-    { q: "What does 'Paper mode' mean?", a: "Trades are simulated with fake money. Great for learning without risk before going live." },
-    { q: "What's a good win rate?", a: "Anywhere between 50–70% is healthy, as long as wins are bigger than losses on average." },
-    { q: "What is buying power?", a: "How much money you have available to open new trades right now." },
-    { q: "Sharpe ratio?", a: "Measures returns relative to risk. Above 1 is good, above 2 is excellent." },
-  ];
-  return (
-    <div className="space-y-4">
-      <div className="soft-card p-6 bg-gradient-to-br from-[var(--info-soft)] to-panel">
-        <div className="flex items-center gap-3 mb-2"><BookOpen className="w-5 h-5 text-primary" /><h2 className="font-semibold text-lg">New to trading?</h2></div>
-        <p className="text-[13px] text-muted-foreground max-w-2xl">No worries — Gilbert handles the hard parts. Here are the words and ideas you'll see most often.</p>
-      </div>
-      <div className="grid md:grid-cols-2 gap-3">
-        {items.map(it => (
-          <div key={it.q} className="soft-card p-4">
-            <div className="font-medium text-[14px]">{it.q}</div>
-            <p className="text-[13px] text-muted-foreground mt-1">{it.a}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}

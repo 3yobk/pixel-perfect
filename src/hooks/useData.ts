@@ -18,13 +18,13 @@ export function useAsync<T>(fn: () => Promise<T>, deps: unknown[] = []): { data:
   return { data, loading, error };
 }
 
-export const usePortfolioSummary = () => useAsync(() => provider.getPortfolioSummary(), []);
+export const usePortfolioSummary = (r?: Range) => useAsync(() => provider.getPortfolioSummary(r), [r]);
 export const usePortfolioSeries  = (r: Range) => useAsync(() => provider.getPortfolioSeries(r), [r]);
-export const usePositions        = () => useAsync(() => provider.getPositions(), []);
-export const useRecentTrades     = () => useAsync(() => provider.getRecentTrades(), []);
-export const useStats            = () => useAsync(() => provider.getStats(), []);
-export const useWinRateByTicker  = () => useAsync(() => provider.getWinRateByTicker(), []);
-export const useExitReasons      = () => useAsync(() => provider.getExitReasons(), []);
+export const usePositions        = (r?: Range) => useAsync(() => provider.getPositions(r), [r]);
+export const useRecentTrades     = (r?: Range) => useAsync(() => provider.getRecentTrades(r), [r]);
+export const useStats            = (r?: Range) => useAsync(() => provider.getStats(r), [r]);
+export const useWinRateByTicker  = (r?: Range) => useAsync(() => provider.getWinRateByTicker(r), [r]);
+export const useExitReasons      = (r?: Range) => useAsync(() => provider.getExitReasons(r), [r]);
 export const useWatchlist        = () => useAsync(() => provider.getWatchlist(), []);
 
 export function useScannerStream(max = 40) {
