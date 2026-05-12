@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import {
-  Activity, Bot, Sparkles, TrendingUp, HelpCircle,
-  Zap, Shield, Target, Clock, PlayCircle, PauseCircle, Eye, Wallet,
+  Bot, Sparkles, HelpCircle, Zap, PlayCircle, PauseCircle, Wallet,
   ArrowUpRight, ArrowDownRight, Search, Bell, User,
 } from "lucide-react";
 import {
