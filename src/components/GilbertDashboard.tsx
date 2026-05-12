@@ -265,9 +265,7 @@ export function GilbertDashboard() {
             >
               <Menu className="w-5 h-5" />
             </button>
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-[color-mix(in_oklab,var(--primary),white_25%)] flex items-center justify-center shadow-sm">
-              <Bot className="w-4 h-4 text-primary-foreground" />
-            </div>
+            <GilbertLogo size={32} />
             <span className="font-semibold text-[15px] hidden sm:inline">Gilbert</span>
             <span className="hidden sm:inline text-muted-foreground/40">/</span>
             <span className="hidden sm:inline text-[14px] font-medium text-muted-foreground">{tab}</span>
