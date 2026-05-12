@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { provider, type Range, type ScannerEntry } from "@/lib/provider";
+import { provider, type Range } from "@/lib/provider";
 import type { ScannerEntry as ScannerEntryType } from "@/lib/mockData";
 
 export function useAsync<T>(fn: () => Promise<T>, deps: unknown[] = []): { data: T | null; loading: boolean; error: Error | null } {
