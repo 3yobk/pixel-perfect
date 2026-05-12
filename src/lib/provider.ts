@@ -122,25 +122,60 @@ function makeSpark(seed: number, up: boolean): number[] {
 
 const wait = <T,>(v: T, ms = 80) => new Promise<T>(res => setTimeout(() => res(v), ms));
 
+function expandTrades(range: Range): typeof mockTrades {
+  const factor = RANGE_FACTOR[range];
+  if (factor <= 1) return mockTrades;
+  const out: typeof mockTrades = [];
+  const r = seedRand(factor * 17);
+  for (let i = 0; i < factor; i++) {
+    for (const t of mockTrades) {
+      const day = i;
+      out.push({
+        ...t,
+        time: range === "1D" ? t.time : `D-${day} ${t.time}`,
+        pnl: Math.round(t.pnl * (0.6 + r() * 0.9)),
+      });
+    }
+  }
+  return out;
+}
+
 export const MockProvider: DataProvider = {
-  async getPortfolioSummary() {
-    const series = buildSeries("1D");
-    const dayChange = series[series.length - 1].v;
+  async getPortfolioSummary(range = "1D") {
+    const series = buildSeries(range);
+    const change = series[series.length - 1].v - series[0].v;
     const baseValue = 124850.32;
     return wait({
-      value: baseValue + dayChange,
-      dayChange,
-      dayChangePct: (dayChange / baseValue) * 100,
+      value: baseValue + series[series.length - 1].v,
+      dayChange: change,
+      dayChangePct: (change / baseValue) * 100,
       buyingPower: 18420.55,
       cash: 5210.10,
     });
   },
   async getPortfolioSeries(range) { return wait(buildSeries(range)); },
   async getPositions() { return wait(mockPositions); },
-  async getRecentTrades() { return wait(mockTrades); },
-  async getStats() { return wait(quickStats); },
-  async getWinRateByTicker() { return wait(mockWinRate); },
-  async getExitReasons() { return wait(mockExits); },
+  async getRecentTrades(range = "1D") { return wait(expandTrades(range)); },
+  async getStats(range = "1D") {
+    const f = RANGE_FACTOR[range];
+    const r = seedRand(f * 31);
+    return wait({
+      ...quickStats,
+      totalTrades: quickStats.totalTrades * f,
+      winRate: Math.max(45, Math.min(75, quickStats.winRate + (r() - 0.5) * 6)),
+      maxDrawdown: Math.round(quickStats.maxDrawdown * Math.sqrt(f)),
+      expectancy: Math.round(quickStats.expectancy * (0.85 + r() * 0.3)),
+    });
+  },
+  async getWinRateByTicker(range = "1D") {
+    const f = RANGE_FACTOR[range];
+    const r = seedRand(f * 7);
+    return wait(mockWinRate.map(w => ({ ...w, trades: w.trades * f, winRate: Math.max(20, Math.min(95, w.winRate + (r() - 0.5) * 12)) })));
+  },
+  async getExitReasons(range = "1D") {
+    const f = RANGE_FACTOR[range];
+    return wait(mockExits.map(e => ({ ...e, value: Math.round(e.value * f) })));
+  },
   async getWatchlist() {
     return wait(watchlistSeed.map((w, i) => ({ ...w, spark: makeSpark(i + 3, w.changePct >= 0) })));
   },
