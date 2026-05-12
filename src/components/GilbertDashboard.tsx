@@ -665,7 +665,56 @@ function StatCard({ label, value, tone, sub, tip }: {
 /* ------------------------------ POSITIONS ------------------------------ */
 
 function PositionsView() {
-  const { data: positions } = usePositions();
+  const { data: initial } = usePositions();
+  const [positions, setPositions] = useState<Position[] | null>(null);
+  const [flash, setFlash] = useState<Record<string, "up" | "down">>({});
+  const [confirmKey, setConfirmKey] = useState<string | null>(null);
+  const prevRef = useRef<Record<string, number>>({});
+
+  useEffect(() => { if (initial) setPositions(initial); }, [initial]);
+
+  // Live polling — try /api/positions, fall back to provider mock
+  useEffect(() => {
+    let alive = true;
+    const tick = async () => {
+      let next: Position[] | null = null;
+      try {
+        const r = await fetch(`${API_BASE}/api/positions`);
+        if (r.ok) next = await r.json();
+      } catch { /* silent */ }
+      if (!next) {
+        try { next = await provider.getPositions(); } catch { /* silent */ }
+      }
+      if (!alive || !next) return;
+      const flashes: Record<string, "up" | "down"> = {};
+      for (const p of next) {
+        const prev = prevRef.current[p.contract];
+        if (prev !== undefined && prev !== p.pnlPct) flashes[p.contract] = p.pnlPct > prev ? "up" : "down";
+        prevRef.current[p.contract] = p.pnlPct;
+      }
+      setPositions(next);
+      if (Object.keys(flashes).length) {
+        setFlash(flashes);
+        setTimeout(() => setFlash({}), 350);
+      }
+    };
+    const id = setInterval(tick, 10000);
+    return () => { alive = false; clearInterval(id); };
+  }, []);
+
+  const closeOne = (contract: string) => {
+    postSilent("/api/bot/close", { contract });
+    setPositions(prev => prev ? prev.filter(p => p.contract !== contract) : prev);
+    setConfirmKey(null);
+  };
+
+  const pnlClass = (p: Position) => {
+    const f = flash[p.contract];
+    const base = p.pnlPct >= 0 ? "text-[var(--gain)]" : "text-[var(--loss)]";
+    const flashCls = f === "up" ? "bg-[var(--gain-soft)] rounded px-1" : f === "down" ? "bg-[var(--loss-soft)] rounded px-1" : "";
+    return `${base} ${flashCls} transition-colors duration-300`;
+  };
+
   return (
     <div className="soft-card p-5">
       <div className="flex items-center gap-2 mb-1">
@@ -682,15 +731,23 @@ function PositionsView() {
           {positions.map(p => {
             const positive = p.pnlPct >= 0;
             return (
-              <div key={p.contract} className="rounded-xl border border-border p-3">
+              <div key={p.contract} className="group rounded-xl border border-border p-3 relative">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="font-semibold text-[14px] truncate">{p.contract}</span>
                     <Pill tone={p.side === "CALL" ? "gain" : "loss"}>{p.side}</Pill>
                   </div>
-                  <span className={`font-num font-semibold text-[14px] ${positive ? "text-[var(--gain)]" : "text-[var(--loss)]"}`}>
-                    {positive ? "+" : ""}{p.pnlPct.toFixed(1)}%
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className={`font-num font-semibold text-[14px] ${pnlClass(p)}`}>
+                      {positive ? "+" : ""}{p.pnlPct.toFixed(1)}%
+                    </span>
+                    <CloseBtn
+                      confirming={confirmKey === p.contract}
+                      onClick={() => confirmKey === p.contract ? closeOne(p.contract) : setConfirmKey(p.contract)}
+                      onCancel={() => setConfirmKey(null)}
+                      label={p.contract}
+                    />
+                  </div>
                 </div>
                 <div className="mt-2 grid grid-cols-3 gap-2 text-[11px] text-muted-foreground font-num">
                   <div><div className="text-[10px] uppercase">Entry</div><div className="text-foreground">${p.entry.toFixed(2)}</div></div>
@@ -714,21 +771,30 @@ function PositionsView() {
                 <th className="py-2 px-2 text-right">Entry</th><th className="py-2 px-2 text-right">Current</th>
                 <th className="py-2 px-2 text-right">P&L</th><th className="py-2 px-2 text-right">Peak</th>
                 <th className="py-2 px-2">Expiry</th><th className="py-2 px-2">Status</th>
+                <th className="py-2 px-2 w-10" />
               </tr>
             </thead>
             <tbody>
               {positions.map(p => {
                 const positive = p.pnlPct >= 0;
                 return (
-                  <tr key={p.contract} className="border-b border-border/60 hover:bg-accent">
+                  <tr key={p.contract} className="group border-b border-border/60 hover:bg-accent">
                     <td className="py-3 px-2 font-medium">{p.contract}</td>
                     <td className="py-3 px-2"><Pill tone={p.side === "CALL" ? "gain" : "loss"}>{p.side}</Pill></td>
                     <td className="py-3 px-2 text-right font-num">${p.entry.toFixed(2)}</td>
                     <td className="py-3 px-2 text-right font-num">${p.current.toFixed(2)}</td>
-                    <td className={`py-3 px-2 text-right font-num font-semibold ${positive ? "text-[var(--gain)]" : "text-[var(--loss)]"}`}>{positive ? "+" : ""}{p.pnlPct.toFixed(1)}%</td>
+                    <td className={`py-3 px-2 text-right font-num font-semibold ${pnlClass(p)}`}>{positive ? "+" : ""}{p.pnlPct.toFixed(1)}%</td>
                     <td className="py-3 px-2 text-right font-num text-muted-foreground">{p.peakPct.toFixed(1)}%</td>
                     <td className="py-3 px-2 text-muted-foreground">{p.expiry}</td>
                     <td className="py-3 px-2"><Pill tone={p.status === "Near SL" ? "loss" : p.status === "Near TP" ? "gain" : "info"}>{p.status}</Pill></td>
+                    <td className="py-2 px-2 text-right">
+                      <CloseBtn
+                        confirming={confirmKey === p.contract}
+                        onClick={() => confirmKey === p.contract ? closeOne(p.contract) : setConfirmKey(p.contract)}
+                        onCancel={() => setConfirmKey(null)}
+                        label={p.contract}
+                      />
+                    </td>
                   </tr>
                 );
               })}
@@ -737,6 +803,27 @@ function PositionsView() {
         </div>
       </>)}
     </div>
+  );
+}
+
+function CloseBtn({ confirming, onClick, onCancel, label }: { confirming: boolean; onClick: () => void; onCancel: () => void; label: string }) {
+  if (confirming) {
+    return (
+      <span className="inline-flex items-center gap-1 text-[11px]">
+        <span className="text-muted-foreground hidden sm:inline">Close {label}?</span>
+        <button onClick={onClick} className="px-2 py-0.5 rounded-md bg-[var(--loss)] text-white font-semibold">Yes</button>
+        <button onClick={onCancel} className="px-2 py-0.5 rounded-md hover:bg-muted text-muted-foreground">No</button>
+      </span>
+    );
+  }
+  return (
+    <button
+      onClick={onClick}
+      title="Close position"
+      className="opacity-0 group-hover:opacity-100 w-6 h-6 rounded-full hover:bg-[var(--loss-soft)] hover:text-[var(--loss)] text-muted-foreground inline-flex items-center justify-center transition"
+    >
+      <X className="w-3.5 h-3.5" />
+    </button>
   );
 }
 
