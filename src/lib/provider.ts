@@ -50,17 +50,19 @@ export type Stats = {
 };
 
 export interface DataProvider {
-  getPortfolioSummary(): Promise<PortfolioSummary>;
+  getPortfolioSummary(range?: Range): Promise<PortfolioSummary>;
   getPortfolioSeries(range: Range): Promise<SeriesPoint[]>;
-  getPositions(): Promise<Position[]>;
-  getRecentTrades(): Promise<Trade[]>;
-  getStats(): Promise<Stats>;
-  getWinRateByTicker(): Promise<{ ticker: string; winRate: number; trades: number }[]>;
-  getExitReasons(): Promise<{ name: string; value: number; color: string }[]>;
+  getPositions(range?: Range): Promise<Position[]>;
+  getRecentTrades(range?: Range): Promise<Trade[]>;
+  getStats(range?: Range): Promise<Stats>;
+  getWinRateByTicker(range?: Range): Promise<{ ticker: string; winRate: number; trades: number }[]>;
+  getExitReasons(range?: Range): Promise<{ name: string; value: number; color: string }[]>;
   getWatchlist(): Promise<WatchlistItem[]>;
-  /** Subscribe to scanner stream. Returns initial buffer + unsubscribe. */
   subscribeScanner(onEntry: (e: ScannerEntry) => void): { initial: ScannerEntry[]; unsubscribe: () => void };
 }
+
+/** Multiplier used by mock to simulate larger datasets over longer ranges. */
+const RANGE_FACTOR: Record<Range, number> = { "1D": 1, "1W": 4, "1M": 14, "3M": 38, "6M": 70, "1Y": 130, "ALL": 220 };
 
 /* ---------------------- Mock implementation ---------------------- */
 
