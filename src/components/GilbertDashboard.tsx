@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Bot, Sparkles, HelpCircle, Zap, PlayCircle, PauseCircle, Wallet,
-  ArrowUpRight, ArrowDownRight, Search, Bell, User,
+  ArrowUpRight, ArrowDownRight, Search, Bell, User, Moon, Sun, Newspaper, ExternalLink,
 } from "lucide-react";
 import {
   Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Line, LineChart,
@@ -13,7 +13,7 @@ import {
 } from "@/hooks/useData";
 import type { Range } from "@/lib/provider";
 
-type Tab = "Today" | "Positions" | "History" | "Insights" | "Watchlist" | "Activity";
+type Tab = "Today" | "Positions" | "History" | "Insights" | "Watchlist" | "News" | "Activity";
 
 const tabs: { id: Tab; label: string }[] = [
   { id: "Today",     label: "Today" },
@@ -21,6 +21,7 @@ const tabs: { id: Tab; label: string }[] = [
   { id: "History",   label: "History" },
   { id: "Insights",  label: "Insights" },
   { id: "Watchlist", label: "Watchlist" },
+  { id: "News",      label: "News" },
   { id: "Activity",  label: "Activity" },
 ];
 
