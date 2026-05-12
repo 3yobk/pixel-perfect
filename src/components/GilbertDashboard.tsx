@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Bot, Sparkles, HelpCircle, Zap, PlayCircle, PauseCircle, Wallet,
-  ArrowUpRight, ArrowDownRight, Search, Bell, User, Moon, Sun, Newspaper, ExternalLink, Menu, X, ChevronDown,
+  Sparkles, HelpCircle, Zap, PlayCircle, PauseCircle, Wallet,
+  ArrowUpRight, ArrowDownRight, Search, Moon, Sun, Newspaper, ExternalLink, Menu, X, ChevronDown,
+  RefreshCw, Zap as Bolt, Send,
 } from "lucide-react";
 import {
   Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Line, LineChart,
@@ -10,8 +11,18 @@ import {
 import {
   usePortfolioSummary, usePortfolioSeries, usePositions, useRecentTrades,
   useStats, useWinRateByTicker, useExitReasons, useWatchlist, useScannerStream,
+  useBotStatus, useRegime,
 } from "@/hooks/useData";
-import type { Range } from "@/lib/provider";
+import { provider, type Range } from "@/lib/provider";
+import type { Position } from "@/lib/mockData";
+
+const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? "";
+const postSilent = (path: string, body?: unknown) =>
+  fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: body ? JSON.stringify(body) : undefined,
+  }).catch(() => null);
 
 type Tab = "Today" | "Positions" | "History" | "Insights" | "Watchlist" | "News" | "Activity";
 
