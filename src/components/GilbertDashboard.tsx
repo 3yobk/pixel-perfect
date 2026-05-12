@@ -1203,7 +1203,7 @@ function NewsView() {
           <h2 className="font-semibold text-lg flex items-center gap-2">
             <Newspaper className="w-5 h-5 text-primary" /> Live news
           </h2>
-          <p className="text-[12px] text-muted-foreground">Fresh market headlines, powered by Finnhub.</p>
+          <p className="text-[12px] text-muted-foreground">Fresh market headlines.</p>
         </div>
         <form
           onSubmit={(e) => {
