@@ -94,7 +94,7 @@ export function GilbertDashboard() {
     <div className="min-h-screen bg-background text-foreground">
       {/* Robinhood-style top nav */}
       <header className="sticky top-0 z-30 bg-panel border-b border-border">
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 h-16 grid grid-cols-[auto_1fr_auto] items-center gap-4">
+        <div className="max-w-[1400px] mx-auto px-3 sm:px-6 h-14 sm:h-16 flex md:grid md:grid-cols-[auto_1fr_auto] items-center justify-between gap-3">
           {/* Left: Logo */}
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-[color-mix(in_oklab,var(--primary),white_25%)] flex items-center justify-center shadow-sm">
@@ -118,11 +118,9 @@ export function GilbertDashboard() {
               );
             })}
           </nav>
-          {/* Mobile spacer + search collapse */}
-          <div className="md:hidden" />
 
           {/* Right: search + actions */}
-          <div className="flex items-center gap-2 justify-end">
+          <div className="flex items-center gap-1.5 sm:gap-2 justify-end">
             <div className="relative hidden lg:block w-64">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <input
@@ -139,17 +137,25 @@ export function GilbertDashboard() {
               {running ? <PauseCircle className="w-3.5 h-3.5" /> : <PlayCircle className="w-3.5 h-3.5" />}
               {running ? "Running" : "Paused"}
             </button>
+            {/* Mobile: tiny status dot */}
+            <button
+              onClick={() => setRunning(r => !r)}
+              title={running ? "Running" : "Paused"}
+              className="sm:hidden w-8 h-8 rounded-full hover:bg-muted flex items-center justify-center"
+            >
+              <span className={`w-2.5 h-2.5 rounded-full ${running ? "bg-[var(--gain)] pulse-green" : "bg-muted-foreground"}`} />
+            </button>
             <button
               onClick={() => setDark(d => !d)}
-              className="w-9 h-9 rounded-full hover:bg-muted flex items-center justify-center text-muted-foreground"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full hover:bg-muted flex items-center justify-center text-muted-foreground"
               title={dark ? "Switch to light" : "Switch to dark"}
             >
               {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
-            <button className="w-9 h-9 rounded-full hover:bg-muted flex items-center justify-center text-muted-foreground" title="Notifications">
+            <button className="hidden sm:flex w-9 h-9 rounded-full hover:bg-muted items-center justify-center text-muted-foreground" title="Notifications">
               <Bell className="w-4 h-4" />
             </button>
-            <button className="w-9 h-9 rounded-full bg-muted hover:bg-accent flex items-center justify-center text-foreground" title="Account">
+            <button className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-muted hover:bg-accent flex items-center justify-center text-foreground" title="Account">
               <User className="w-4 h-4" />
             </button>
           </div>
