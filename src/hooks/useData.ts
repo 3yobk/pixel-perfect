@@ -40,3 +40,48 @@ export function useScannerStream(max = 40) {
   }, [max]);
   return feed;
 }
+
+const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? "";
+
+export type BotStatus = {
+  paused: boolean;
+  running: boolean;
+  regime: string;
+  spy_vs_sma20: number;
+  open_positions: number;
+  session_pnl: number;
+  last_scan: string | null;
+  market_open: boolean;
+};
+
+export function useBotStatus(interval = 10000) {
+  const [status, setStatus] = useState<BotStatus | null>(null);
+  useEffect(() => {
+    let alive = true;
+    const fetch_ = () =>
+      fetch(`${API_BASE}/api/bot/status`)
+        .then(r => r.ok ? r.json() : null)
+        .then(d => { if (alive && d) setStatus(d); })
+        .catch(() => {});
+    fetch_();
+    const id = setInterval(fetch_, interval);
+    return () => { alive = false; clearInterval(id); };
+  }, [interval]);
+  return status;
+}
+
+export function useRegime(interval = 60000) {
+  const [regime, setRegime] = useState<{ regime: string; spy_vs_sma20: number; last_scan?: string; open_positions?: number; scanner_active?: boolean } | null>(null);
+  useEffect(() => {
+    let alive = true;
+    const fetch_ = () =>
+      fetch(`${API_BASE}/api/regime`)
+        .then(r => r.ok ? r.json() : null)
+        .then(d => { if (alive && d) setRegime(d); })
+        .catch(() => {});
+    fetch_();
+    const id = setInterval(fetch_, interval);
+    return () => { alive = false; clearInterval(id); };
+  }, [interval]);
+  return regime;
+}
