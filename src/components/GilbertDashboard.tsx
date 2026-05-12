@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Bot, Sparkles, HelpCircle, Zap, PlayCircle, PauseCircle, Wallet,
-  ArrowUpRight, ArrowDownRight, Search, Bell, User,
+  ArrowUpRight, ArrowDownRight, Search, Bell, User, Moon, Sun, Newspaper, ExternalLink,
 } from "lucide-react";
 import {
   Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Line, LineChart,
@@ -13,7 +13,7 @@ import {
 } from "@/hooks/useData";
 import type { Range } from "@/lib/provider";
 
-type Tab = "Today" | "Positions" | "History" | "Insights" | "Watchlist" | "Activity";
+type Tab = "Today" | "Positions" | "History" | "Insights" | "Watchlist" | "News" | "Activity";
 
 const tabs: { id: Tab; label: string }[] = [
   { id: "Today",     label: "Today" },
@@ -21,6 +21,7 @@ const tabs: { id: Tab; label: string }[] = [
   { id: "History",   label: "History" },
   { id: "Insights",  label: "Insights" },
   { id: "Watchlist", label: "Watchlist" },
+  { id: "News",      label: "News" },
   { id: "Activity",  label: "Activity" },
 ];
 
@@ -76,22 +77,34 @@ function Skeleton({ className = "" }: { className?: string }) {
 export function GilbertDashboard() {
   const [tab, setTab] = useState<Tab>("Today");
   const [running, setRunning] = useState(true);
+  const [dark, setDark] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    const saved = localStorage.getItem("gilbert-theme");
+    if (saved) return saved === "dark";
+    return window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false;
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.toggle("dark", dark);
+    localStorage.setItem("gilbert-theme", dark ? "dark" : "light");
+  }, [dark]);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* Robinhood-style top nav: logo + nav links + search + actions */}
+      {/* Robinhood-style top nav */}
       <header className="sticky top-0 z-30 bg-panel border-b border-border">
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 h-16 flex items-center gap-4 sm:gap-8">
-          {/* Logo */}
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-[#7aa6ff] flex items-center justify-center shadow-sm">
-              <Bot className="w-4 h-4 text-white" />
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 h-16 grid grid-cols-[auto_1fr_auto] items-center gap-4">
+          {/* Left: Logo */}
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-[color-mix(in_oklab,var(--primary),white_25%)] flex items-center justify-center shadow-sm">
+              <Bot className="w-4 h-4 text-primary-foreground" />
             </div>
             <span className="font-semibold text-[15px] hidden sm:inline">Gilbert</span>
           </div>
 
-          {/* Nav links */}
-          <nav className="hidden md:flex items-center gap-1">
+          {/* Center: nav links (desktop) */}
+          <nav className="hidden md:flex items-center justify-center gap-1">
             {tabs.map(t => {
               const active = tab === t.id;
               return (
@@ -105,21 +118,19 @@ export function GilbertDashboard() {
               );
             })}
           </nav>
+          {/* Mobile spacer + search collapse */}
+          <div className="md:hidden" />
 
-          {/* Search */}
-          <div className="flex-1 max-w-md ml-auto">
-            <div className="relative">
+          {/* Right: search + actions */}
+          <div className="flex items-center gap-2 justify-end">
+            <div className="relative hidden lg:block w-64">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <input
                 type="text"
-                placeholder="Search stocks, contracts…"
+                placeholder="Search…"
                 className="w-full bg-muted/70 border-0 rounded-full pl-9 pr-3 py-2 text-[13px] placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
               />
             </div>
-          </div>
-
-          {/* Actions */}
-          <div className="flex items-center gap-1 shrink-0">
             <button
               onClick={() => setRunning(r => !r)}
               title={running ? "Pause bot" : "Resume bot"}
@@ -127,6 +138,13 @@ export function GilbertDashboard() {
             >
               {running ? <PauseCircle className="w-3.5 h-3.5" /> : <PlayCircle className="w-3.5 h-3.5" />}
               {running ? "Running" : "Paused"}
+            </button>
+            <button
+              onClick={() => setDark(d => !d)}
+              className="w-9 h-9 rounded-full hover:bg-muted flex items-center justify-center text-muted-foreground"
+              title={dark ? "Switch to light" : "Switch to dark"}
+            >
+              {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
             <button className="w-9 h-9 rounded-full hover:bg-muted flex items-center justify-center text-muted-foreground" title="Notifications">
               <Bell className="w-4 h-4" />
@@ -160,6 +178,7 @@ export function GilbertDashboard() {
         {tab === "History"   && <HistoryView />}
         {tab === "Insights"  && <InsightsView />}
         {tab === "Watchlist" && <WatchlistView />}
+        {tab === "News"      && <NewsView />}
         {tab === "Activity"  && <ActivityView />}
       </main>
     </div>
@@ -379,18 +398,14 @@ function StatCard({ label, value, tone, sub, tip }: {
 /* ------------------------------ POSITIONS ------------------------------ */
 
 function PositionsView() {
-  const [range, setRange] = useState<Range>("1D");
-  const { data: positions } = usePositions(range);
+  const { data: positions } = usePositions();
   return (
     <div className="soft-card p-5">
-      <div className="flex items-start sm:items-center gap-3 flex-col sm:flex-row sm:justify-between mb-1">
-        <div className="flex items-center gap-2">
-          <h2 className="font-semibold">Open positions</h2>
-          <Tip text="Trades Gilbert has opened and is still managing." />
-        </div>
-        <RangeTabs value={range} onChange={setRange} />
+      <div className="flex items-center gap-2 mb-1">
+        <h2 className="font-semibold">Open positions</h2>
+        <Tip text="Trades Gilbert has opened and is still managing." />
       </div>
-      <p className="text-[12px] text-muted-foreground mb-4">{labelFor(range)} — {positions?.length ?? 0} open</p>
+      <p className="text-[12px] text-muted-foreground mb-4">{positions?.length ?? 0} open</p>
       {!positions ? <Skeleton className="h-40 w-full" /> : positions.length === 0 ? (
         <div className="text-center py-10 text-[13px] text-muted-foreground">No open positions for this range.</div>
       ) : (
@@ -628,3 +643,150 @@ function ActivityView() {
   );
 }
 
+
+/* -------------------------------- NEWS -------------------------------- */
+
+type NewsItem = {
+  id: number;
+  headline: string;
+  summary: string;
+  source: string;
+  url: string;
+  image: string;
+  datetime: number; // seconds
+  category: string;
+  related: string;
+};
+
+const NEWS_CATEGORIES = ["general", "forex", "crypto", "merger"] as const;
+type NewsCategory = (typeof NEWS_CATEGORIES)[number];
+
+function timeAgo(unixSec: number) {
+  const diff = Math.max(0, Date.now() / 1000 - unixSec);
+  if (diff < 60) return `${Math.floor(diff)}s ago`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)}d ago`;
+}
+
+function NewsView() {
+  const [category, setCategory] = useState<NewsCategory>("general");
+  const [symbol, setSymbol] = useState("");
+  const [query, setQuery] = useState<{ symbol?: string; category: NewsCategory }>({ category: "general" });
+  const [items, setItems] = useState<NewsItem[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setItems(null);
+    setError(null);
+    const params = new URLSearchParams();
+    if (query.symbol) params.set("symbol", query.symbol);
+    else params.set("category", query.category);
+    fetch(`/api/news?${params.toString()}`)
+      .then(r => r.json())
+      .then(d => {
+        if (cancelled) return;
+        if (Array.isArray(d)) setItems(d.slice(0, 50));
+        else setError(d?.error ?? "Failed to load news");
+      })
+      .catch(e => !cancelled && setError(e.message));
+    return () => { cancelled = true; };
+  }, [query]);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h2 className="font-semibold text-lg flex items-center gap-2">
+            <Newspaper className="w-5 h-5 text-primary" /> Live news
+          </h2>
+          <p className="text-[12px] text-muted-foreground">Fresh market headlines, powered by Finnhub.</p>
+        </div>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const sym = symbol.trim().toUpperCase();
+            setQuery(sym ? { symbol: sym, category } : { category });
+          }}
+          className="flex items-center gap-2"
+        >
+          <div className="relative">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <input
+              value={symbol}
+              onChange={(e) => setSymbol(e.target.value)}
+              placeholder="Ticker e.g. AAPL"
+              className="bg-muted/70 border-0 rounded-full pl-9 pr-3 py-2 text-[13px] w-44 placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
+          </div>
+          <button type="submit" className="px-3 py-2 rounded-full bg-foreground text-background text-[12px] font-semibold">Search</button>
+          {query.symbol && (
+            <button type="button" onClick={() => { setSymbol(""); setQuery({ category }); }} className="text-[12px] text-muted-foreground hover:text-foreground">Clear</button>
+          )}
+        </form>
+      </div>
+
+      {!query.symbol && (
+        <div className="flex items-center gap-1 flex-wrap">
+          {NEWS_CATEGORIES.map(c => (
+            <button
+              key={c}
+              onClick={() => { setCategory(c); setQuery({ category: c }); }}
+              className={`px-3 py-1.5 rounded-full text-[12px] font-semibold capitalize transition ${query.category === c ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:text-foreground"}`}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {error && (
+        <div className="soft-card p-4 text-[13px] text-[var(--loss)]">Couldn't load news: {error}</div>
+      )}
+
+      {!items && !error ? (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-48 w-full" />)}
+        </div>
+      ) : items && items.length === 0 ? (
+        <div className="soft-card p-10 text-center text-[13px] text-muted-foreground">No headlines found.</div>
+      ) : (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {items?.map(n => (
+            <a
+              key={n.id}
+              href={n.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="soft-card overflow-hidden flex flex-col hover:bg-accent transition group"
+            >
+              {n.image ? (
+                <div className="aspect-[16/9] bg-muted overflow-hidden">
+                  <img src={n.image} alt="" loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />
+                </div>
+              ) : (
+                <div className="aspect-[16/9] bg-gradient-to-br from-muted to-elevated flex items-center justify-center">
+                  <Newspaper className="w-8 h-8 text-muted-foreground" />
+                </div>
+              )}
+              <div className="p-4 flex-1 flex flex-col gap-2">
+                <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                  <span className="font-semibold uppercase tracking-wide truncate">{n.source}</span>
+                  <span>·</span>
+                  <span>{timeAgo(n.datetime)}</span>
+                  {n.related && <Pill tone="info">{n.related.split(",")[0]}</Pill>}
+                </div>
+                <h3 className="font-semibold text-[14px] leading-snug line-clamp-3">{n.headline}</h3>
+                {n.summary && <p className="text-[12px] text-muted-foreground line-clamp-3">{n.summary}</p>}
+                <div className="mt-auto flex items-center gap-1 text-[11px] text-primary font-semibold pt-1">
+                  Read more <ExternalLink className="w-3 h-3" />
+                </div>
+              </div>
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

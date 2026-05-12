@@ -64,6 +64,27 @@
   --radius: 12px;
 }
 
+.dark {
+  --background: #000000;
+  --foreground: #f5f7fa;
+  --panel: #0a0a0a;
+  --elevated: #141414;
+  --border: #1f1f1f;
+  --muted: #161616;
+  --muted-foreground: #8a8f9c;
+  --primary: #00c805;
+  --primary-foreground: #000000;
+  --accent: #181818;
+  --accent-foreground: #f5f7fa;
+  --gain: #00c805;
+  --gain-soft: rgba(0, 200, 5, 0.14);
+  --loss: #ff5000;
+  --loss-soft: rgba(255, 80, 0, 0.14);
+  --warn: #f5b400;
+  --warn-soft: rgba(245, 180, 0, 0.14);
+  --info-soft: rgba(0, 200, 5, 0.10);
+}
+
 @layer base {
   html, body, #root {
     background-color: var(--color-background);
@@ -83,6 +104,7 @@
   border-radius: 16px;
   box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
 }
+.dark .soft-card { box-shadow: none; }
 
 @utility chip {
   display: inline-flex;
