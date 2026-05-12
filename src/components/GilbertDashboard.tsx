@@ -1,686 +1,553 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  Activity, Bot, CheckCircle2, Wifi, MessageSquare, X, Search, Send,
+  Activity, Bot, Wifi, Sparkles, TrendingUp, TrendingDown,
+  HelpCircle, BookOpen, Zap, Shield, Target, Clock, PlayCircle, PauseCircle,
 } from "lucide-react";
 import {
-  Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Legend,
+  Area, AreaChart, Bar, BarChart, CartesianGrid, Cell,
   Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
 import {
   openPositions, recentTrades, pnlCurve, initialScanner, makeScannerEntry,
-  signalQueue, quickStats, winRateByTicker, hourHeatmap, drawdownSeries,
-  exitReasons, tradeDistribution, avgWinLossByTicker, botLog,
+  quickStats, winRateByTicker, exitReasons,
   type ScannerEntry,
 } from "@/lib/mockData";
 
-type Tab = "Quote" | "Chart" | "News" | "Options" | "GilbertTrader";
-type SubTab = "Dashboard" | "Analytics" | "Bot Log";
+type Tab = "Today" | "Positions" | "History" | "Insights" | "Activity" | "Learn";
+
+const tabs: { id: Tab; label: string; icon: typeof Activity; hint: string }[] = [
+  { id: "Today",     label: "Today",     icon: Sparkles,  hint: "What's happening right now" },
+  { id: "Positions", label: "Positions", icon: Target,    hint: "Trades currently open" },
+  { id: "History",   label: "History",   icon: Clock,     hint: "Recently closed trades" },
+  { id: "Insights",  label: "Insights",  icon: TrendingUp,hint: "Performance patterns" },
+  { id: "Activity",  label: "Activity",  icon: Activity,  hint: "Bot's live thinking" },
+  { id: "Learn",     label: "Learn",     icon: BookOpen,  hint: "Glossary & tips" },
+];
+
+function Tip({ text }: { text: string }) {
+  return (
+    <span className="group relative inline-flex">
+      <HelpCircle className="w-3.5 h-3.5 text-muted-foreground/70 cursor-help" />
+      <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-56 p-2 rounded-lg bg-foreground text-background text-[11px] leading-snug opacity-0 group-hover:opacity-100 transition shadow-lg z-50">
+        {text}
+      </span>
+    </span>
+  );
+}
+
+function Pill({ tone, children }: { tone: "gain" | "loss" | "warn" | "info" | "muted"; children: React.ReactNode }) {
+  const map = {
+    gain:  "bg-[var(--gain-soft)] text-[var(--gain)]",
+    loss:  "bg-[var(--loss-soft)] text-[var(--loss)]",
+    warn:  "bg-[var(--warn-soft)] text-[var(--warn)]",
+    info:  "bg-[var(--info-soft)] text-[var(--primary)]",
+    muted: "bg-muted text-muted-foreground",
+  };
+  return <span className={`chip ${map[tone]}`}>{children}</span>;
+}
 
 export function GilbertDashboard() {
-  const [activeTopTab, setActiveTopTab] = useState<Tab>("GilbertTrader");
-  const [subTab, setSubTab] = useState<SubTab>("Dashboard");
-  const [dataMode, setDataMode] = useState<"Mock" | "Live">("Mock");
+  const [tab, setTab] = useState<Tab>("Today");
   const [now, setNow] = useState(new Date());
+  const [running, setRunning] = useState(true);
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
 
-  const et = now.toLocaleTimeString("en-US", { timeZone: "America/New_York", hour12: false });
+  const et = now.toLocaleTimeString("en-US", { timeZone: "America/New_York", hour12: true });
+  const totalPnl = pnlCurve[pnlCurve.length - 1].v;
 
   return (
-    <div className="min-h-screen flex flex-col bg-background text-foreground">
-      {/* Top Webull-style nav */}
-      <header className="border-b border-border bg-panel">
-        <div className="flex items-center h-11 px-3">
-          <div className="flex items-center gap-1 text-[11px] text-muted-foreground mr-4 font-num">
-            <span className="text-foreground font-semibold tracking-wide">WEBULL</span>
-            <span className="ml-2">AAPL · Apple Inc.</span>
-            <span className="ml-2 text-gain">$232.41 +1.24 (+0.54%)</span>
+    <div className="min-h-screen bg-background text-foreground">
+      {/* Top bar */}
+      <header className="sticky top-0 z-30 bg-panel/80 backdrop-blur border-b border-border">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-[#7aa6ff] flex items-center justify-center shadow-sm">
+              <Bot className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <div className="font-semibold text-[15px] leading-tight">Gilbert</div>
+              <div className="text-[11px] text-muted-foreground leading-tight">Your trading assistant</div>
+            </div>
           </div>
-          <nav className="flex items-end h-11">
-            {(["Quote","Chart","News","Options","GilbertTrader"] as Tab[]).map(t => {
-              const active = activeTopTab === t;
-              return (
-                <button
-                  key={t}
-                  onClick={() => setActiveTopTab(t)}
-                  className={`relative h-11 px-4 text-[13px] transition-colors ${active ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
-                >
-                  {t === "GilbertTrader" ? <span>🤖 GilbertTrader</span> : t}
-                  {active && <span className="absolute left-2 right-2 bottom-0 h-[2px] bg-primary" />}
-                </button>
-              );
-            })}
-          </nav>
-          <div className="ml-auto flex items-center gap-3 text-[11px]">
-            <button
-              onClick={() => setDataMode(m => m === "Mock" ? "Live" : "Mock")}
-              className="flex items-center border border-border rounded overflow-hidden"
-            >
-              <span className={`px-2 py-1 ${dataMode === "Mock" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>Mock Data</span>
-              <span className={`px-2 py-1 ${dataMode === "Live" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>Live</span>
-            </button>
-            <span className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-gain pulse-green" />
-              <span className="text-gain font-semibold tracking-wide">OPEN</span>
-            </span>
-            <span className="font-num text-muted-foreground">{et} ET</span>
-            <span className="px-2 py-1 bg-elevated border border-border rounded font-num text-warn">
-              PAPER · $100,000.00
-            </span>
+
+          <div className="hidden sm:flex items-center gap-2 text-[12px]">
+            <Pill tone="gain"><span className="w-1.5 h-1.5 rounded-full bg-[var(--gain)] pulse-green" /> Connected</Pill>
+            <Pill tone="muted"><Clock className="w-3 h-3" /> {et} ET</Pill>
+            <Pill tone="info"><Shield className="w-3 h-3" /> Paper mode</Pill>
           </div>
+
+          <button
+            onClick={() => setRunning(r => !r)}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[13px] font-medium transition ${running ? "bg-[var(--gain-soft)] text-[var(--gain)] hover:brightness-95" : "bg-muted text-muted-foreground hover:bg-accent"}`}
+          >
+            {running ? <PauseCircle className="w-4 h-4" /> : <PlayCircle className="w-4 h-4" />}
+            {running ? "Bot is running" : "Bot is paused"}
+          </button>
         </div>
 
-        {activeTopTab === "GilbertTrader" && (
-          <div className="flex items-center gap-1 px-3 h-9 border-t border-border bg-background">
-            {(["Dashboard","Analytics","Bot Log"] as SubTab[]).map(s => {
-              const active = subTab === s;
-              return (
-                <button
-                  key={s}
-                  onClick={() => setSubTab(s)}
-                  className={`px-3 h-7 text-[12px] rounded-sm ${active ? "bg-elevated text-foreground" : "text-muted-foreground hover:text-foreground"}`}
-                >
-                  {s}
-                </button>
-              );
-            })}
-          </div>
-        )}
+        {/* Tabs */}
+        <div className="max-w-[1400px] mx-auto px-2 sm:px-4 flex items-center gap-1 overflow-x-auto">
+          {tabs.map(t => {
+            const Icon = t.icon;
+            const active = tab === t.id;
+            return (
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id)}
+                className={`group relative flex items-center gap-2 px-3 sm:px-4 py-2.5 text-[13px] font-medium whitespace-nowrap transition border-b-2 ${active ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+              >
+                <Icon className="w-4 h-4" />
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
       </header>
 
-      {activeTopTab !== "GilbertTrader" ? (
-        <PlaceholderTab name={activeTopTab} />
-      ) : dataMode === "Live" ? (
-        <LiveModeMessage />
-      ) : subTab === "Dashboard" ? (
-        <Dashboard />
-      ) : subTab === "Analytics" ? (
-        <Analytics />
-      ) : (
-        <BotLog />
-      )}
+      <main className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6 space-y-6">
+        {tab === "Today"     && <TodayView totalPnl={totalPnl} running={running} />}
+        {tab === "Positions" && <PositionsView />}
+        {tab === "History"   && <HistoryView />}
+        {tab === "Insights"  && <InsightsView />}
+        {tab === "Activity"  && <ActivityView />}
+        {tab === "Learn"     && <LearnView />}
+      </main>
     </div>
   );
 }
 
-/* ---------- Tabs / Live ---------- */
+/* ------------------------------- TODAY ------------------------------- */
 
-function PlaceholderTab({ name }: { name: string }) {
+function TodayView({ totalPnl, running }: { totalPnl: number; running: boolean }) {
+  const pnlPositive = totalPnl >= 0;
   return (
-    <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
-      {name} tab — switch to <span className="mx-1 text-foreground">🤖 GilbertTrader</span> to view the bot.
-    </div>
-  );
-}
+    <div className="space-y-6">
+      {/* Welcome */}
+      <div className="soft-card p-5 sm:p-6 bg-gradient-to-br from-[var(--info-soft)] to-panel">
+        <div className="flex items-start gap-4">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+            <Sparkles className="w-5 h-5 text-primary" />
+          </div>
+          <div className="flex-1">
+            <h1 className="text-lg sm:text-xl font-semibold">Good day! Here's what Gilbert is up to.</h1>
+            <p className="text-[13px] text-muted-foreground mt-1">
+              {running
+                ? "I'm scanning the market and managing your trades. You don't need to do anything — just check in whenever you like."
+                : "I'm paused. Press 'Bot is paused' in the top right to start scanning again."}
+            </p>
+          </div>
+        </div>
+      </div>
 
-function LiveModeMessage() {
-  return (
-    <div className="flex-1 flex items-center justify-center p-8">
-      <div className="panel max-w-md w-full p-6">
-        <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2">Live Mode</div>
-        <div className="text-base text-foreground mb-3">Connect to GilbertTrader API</div>
-        <p className="text-[12px] text-muted-foreground leading-relaxed mb-4">
-          Set the following environment variables to stream live bot data:
-        </p>
-        <pre className="font-num text-[11px] bg-background border border-border p-3 rounded text-foreground overflow-x-auto">
-{`GILBERT_API_URL=https://your-bot.com/api
-GILBERT_API_KEY=...`}
-        </pre>
-        <p className="text-[12px] text-muted-foreground mt-3">
-          Then refresh — the dashboard will subscribe to <code className="text-foreground">/positions</code>, <code className="text-foreground">/trades</code>, and <code className="text-foreground">/scanner</code>.
-        </p>
+      {/* Stat cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <StatCard
+          label="Today's P&L"
+          tip="Profit and Loss — how much money you've made or lost today."
+          value={`${pnlPositive ? "+" : ""}$${totalPnl}`}
+          tone={pnlPositive ? "gain" : "loss"}
+          sub={`${pnlPositive ? "▲" : "▼"} vs. yesterday`}
+        />
+        <StatCard
+          label="Open trades"
+          tip="Trades that are still active and not yet closed."
+          value={`${openPositions.length}`}
+          tone="info"
+          sub="being monitored"
+        />
+        <StatCard
+          label="Win rate"
+          tip="The percentage of trades that ended profitable."
+          value={`${quickStats.winRate}%`}
+          tone="gain"
+          sub={`${quickStats.totalTrades} trades total`}
+        />
+        <StatCard
+          label="Avg win / loss"
+          tip="Average dollars made on winning trades vs. lost on losing trades."
+          value={`+$${quickStats.avgWin} / -$${Math.abs(quickStats.avgLoss)}`}
+          tone="muted"
+          sub={`Expectancy +$${quickStats.expectancy}`}
+        />
+      </div>
+
+      {/* P&L chart + positions */}
+      <div className="grid lg:grid-cols-3 gap-4 sm:gap-6">
+        <div className="soft-card p-5 lg:col-span-2">
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2">
+              <h2 className="font-semibold">Today's P&L curve</h2>
+              <Tip text="A timeline of how your account has gone up or down throughout the day." />
+            </div>
+            <Pill tone={pnlPositive ? "gain" : "loss"}>
+              {pnlPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+              {pnlPositive ? "+" : ""}{totalPnl}
+            </Pill>
+          </div>
+          <p className="text-[12px] text-muted-foreground mb-3">Updated live as trades close.</p>
+          <div className="h-56">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={pnlCurve}>
+                <defs>
+                  <linearGradient id="pnl" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="var(--gain)" stopOpacity={0.35} />
+                    <stop offset="100%" stopColor="var(--gain)" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                <XAxis dataKey="t" stroke="var(--muted-foreground)" fontSize={11} tickLine={false} axisLine={false} />
+                <YAxis stroke="var(--muted-foreground)" fontSize={11} tickLine={false} axisLine={false} />
+                <Tooltip
+                  contentStyle={{ background: "var(--panel)", border: "1px solid var(--border)", borderRadius: 12, fontSize: 12 }}
+                  formatter={(v: number) => [`$${v}`, "P&L"]}
+                />
+                <Area type="monotone" dataKey="v" stroke="var(--gain)" strokeWidth={2.5} fill="url(#pnl)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="soft-card p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <h2 className="font-semibold">Open positions</h2>
+            <Tip text="Trades the bot has placed that are still waiting to hit profit target or stop loss." />
+          </div>
+          <div className="space-y-3">
+            {openPositions.map(p => {
+              const positive = p.pnlPct >= 0;
+              return (
+                <div key={p.contract} className="rounded-xl border border-border p-3 hover:bg-accent transition">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-[14px]">{p.contract}</span>
+                      <Pill tone={p.side === "CALL" ? "gain" : "loss"}>{p.side}</Pill>
+                    </div>
+                    <span className={`font-num font-semibold text-[14px] ${positive ? "text-[var(--gain)]" : "text-[var(--loss)]"}`}>
+                      {positive ? "+" : ""}{p.pnlPct.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="mt-1.5 flex items-center justify-between text-[11px] text-muted-foreground font-num">
+                    <span>Entry ${p.entry.toFixed(2)} → ${p.current.toFixed(2)}</span>
+                    <span>{p.status}</span>
+                  </div>
+                  <div className="mt-2 h-1.5 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className={`h-full ${positive ? "bg-[var(--gain)]" : "bg-[var(--loss)]"}`}
+                      style={{ width: `${Math.min(Math.abs(p.pnlPct) * 3, 100)}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Tip of the day */}
+      <div className="soft-card p-5 flex items-start gap-4">
+        <div className="w-10 h-10 rounded-xl bg-[var(--warn-soft)] flex items-center justify-center shrink-0">
+          <Zap className="w-5 h-5 text-[var(--warn)]" />
+        </div>
+        <div>
+          <div className="font-semibold text-[14px]">Beginner tip</div>
+          <p className="text-[13px] text-muted-foreground mt-0.5">
+            A "stop loss" automatically closes a trade once it loses a certain amount, so you can't lose more than you planned. Gilbert sets one on every trade.
+          </p>
+        </div>
       </div>
     </div>
   );
 }
 
-/* ---------- Dashboard ---------- */
-
-function Dashboard() {
+function StatCard({ label, value, tone, sub, tip }: {
+  label: string; value: string; tone: "gain" | "loss" | "info" | "muted"; sub: string; tip: string;
+}) {
+  const accent = {
+    gain: "text-[var(--gain)]",
+    loss: "text-[var(--loss)]",
+    info: "text-primary",
+    muted: "text-foreground",
+  }[tone];
   return (
-    <div className="flex-1 grid grid-cols-[240px_1fr_280px] gap-2 p-2 min-h-0">
-      <LeftColumn />
-      <CenterColumn />
-      <RightColumn />
+    <div className="soft-card p-4">
+      <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
+        {label} <Tip text={tip} />
+      </div>
+      <div className={`mt-1.5 text-2xl font-semibold font-num ${accent}`}>{value}</div>
+      <div className="text-[11px] text-muted-foreground mt-0.5">{sub}</div>
     </div>
   );
 }
 
-function LeftColumn() {
+/* ------------------------------ POSITIONS ------------------------------ */
+
+function PositionsView() {
   return (
-    <div className="flex flex-col gap-2 min-h-0">
-      <div className="panel">
-        <div className="panel-header">
-          <span>Gilbert Trader</span>
-          <span className="flex items-center gap-1.5 text-gain normal-case">
-            <span className="w-1.5 h-1.5 rounded-full bg-gain pulse-green" /> Active
-          </span>
+    <div className="soft-card p-5">
+      <div className="flex items-center gap-2 mb-1">
+        <h2 className="font-semibold">Open positions</h2>
+        <Tip text="Each row is a trade Gilbert has opened and is still managing." />
+      </div>
+      <p className="text-[12px] text-muted-foreground mb-4">The bot will close these automatically when conditions are met.</p>
+      <div className="overflow-x-auto">
+        <table className="w-full text-[13px]">
+          <thead>
+            <tr className="text-left text-[11px] uppercase tracking-wide text-muted-foreground border-b border-border">
+              <th className="py-2 px-2">Contract</th>
+              <th className="py-2 px-2">Side</th>
+              <th className="py-2 px-2 text-right">Entry</th>
+              <th className="py-2 px-2 text-right">Current</th>
+              <th className="py-2 px-2 text-right">P&L</th>
+              <th className="py-2 px-2 text-right">Peak</th>
+              <th className="py-2 px-2">Expiry</th>
+              <th className="py-2 px-2">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {openPositions.map(p => {
+              const positive = p.pnlPct >= 0;
+              return (
+                <tr key={p.contract} className="border-b border-border/60 hover:bg-accent">
+                  <td className="py-3 px-2 font-medium">{p.contract}</td>
+                  <td className="py-3 px-2"><Pill tone={p.side === "CALL" ? "gain" : "loss"}>{p.side}</Pill></td>
+                  <td className="py-3 px-2 text-right font-num">${p.entry.toFixed(2)}</td>
+                  <td className="py-3 px-2 text-right font-num">${p.current.toFixed(2)}</td>
+                  <td className={`py-3 px-2 text-right font-num font-semibold ${positive ? "text-[var(--gain)]" : "text-[var(--loss)]"}`}>
+                    {positive ? "+" : ""}{p.pnlPct.toFixed(1)}%
+                  </td>
+                  <td className="py-3 px-2 text-right font-num text-muted-foreground">{p.peakPct.toFixed(1)}%</td>
+                  <td className="py-3 px-2 text-muted-foreground">{p.expiry}</td>
+                  <td className="py-3 px-2">
+                    <Pill tone={p.status === "Near SL" ? "loss" : p.status === "Near TP" ? "gain" : "info"}>{p.status}</Pill>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------ HISTORY ------------------------------ */
+
+function HistoryView() {
+  const wins = recentTrades.filter(t => t.pnl > 0).length;
+  const losses = recentTrades.length - wins;
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-3 gap-3">
+        <div className="soft-card p-4">
+          <div className="text-[12px] text-muted-foreground">Wins today</div>
+          <div className="text-2xl font-semibold text-[var(--gain)] font-num">{wins}</div>
         </div>
-        <div className="p-3 space-y-2.5 text-[12px]">
-          <Row label="Mode"><Badge tone="warn">PAPER</Badge></Row>
-          <Row label="Strategy">
-            <span className="text-foreground">NORMAL</span>
-            <span className="text-muted-foreground font-num ml-1.5">TP 25% · SL 15%</span>
-          </Row>
-          <Row label="Regime">
-            <span className="text-gain">🟢 BULL</span>
-            <span className="text-muted-foreground font-num ml-1.5">+1.2% vs SMA20</span>
-          </Row>
-          <Row label="Last scan"><span className="font-num text-muted-foreground">10:42:31</span></Row>
-          <Row label="Next in"><span className="font-num text-foreground">00:18</span></Row>
+        <div className="soft-card p-4">
+          <div className="text-[12px] text-muted-foreground">Losses today</div>
+          <div className="text-2xl font-semibold text-[var(--loss)] font-num">{losses}</div>
+        </div>
+        <div className="soft-card p-4">
+          <div className="text-[12px] text-muted-foreground">Net</div>
+          <div className="text-2xl font-semibold font-num">
+            ${recentTrades.reduce((s, t) => s + t.pnl, 0)}
+          </div>
         </div>
       </div>
-
-      <div className="panel">
-        <div className="panel-header"><span>Today's P&amp;L</span></div>
-        <div className="p-3 space-y-2">
-          <div className="font-num text-[24px] text-gain leading-none">+$304.18</div>
-          <Row label="Win / Loss"><span className="font-num"><span className="text-gain">9W</span> <span className="text-loss">5L</span></span></Row>
-          <Row label="Best trade"><span className="font-num text-gain">+$95.00</span></Row>
-          <Row label="Budget left"><span className="font-num">$94,210</span></Row>
+      <div className="soft-card p-5">
+        <div className="flex items-center gap-2 mb-3">
+          <h2 className="font-semibold">Recently closed trades</h2>
+          <Tip text="Each row is a trade Gilbert opened and then closed today." />
         </div>
-      </div>
-
-      <div className="panel">
-        <div className="panel-header"><span>System Health</span></div>
-        <div className="p-3 space-y-1.5 text-[12px]">
-          <Health icon={<Wifi className="w-3 h-3"/>}        label="API"          ok="Connected" />
-          <Health icon={<MessageSquare className="w-3 h-3"/>} label="Discord"    ok="Online" />
-          <Health icon={<Activity className="w-3 h-3"/>}    label="Tradier"      ok="Live" />
-          <Health icon={<Bot className="w-3 h-3"/>}         label="Webull API"   ok="Ready" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex items-center justify-between gap-2">
-      <span className="text-muted-foreground text-[11px] uppercase tracking-wider">{label}</span>
-      <span className="text-[12px]">{children}</span>
-    </div>
-  );
-}
-
-function Badge({ tone, children }: { tone: "warn" | "gain" | "loss" | "primary"; children: React.ReactNode }) {
-  const map = {
-    warn:    "bg-warn/15 text-warn",
-    gain:    "bg-gain/15 text-gain",
-    loss:    "bg-loss/15 text-loss",
-    primary: "bg-primary/20 text-primary",
-  };
-  return <span className={`px-1.5 py-0.5 text-[10px] font-semibold tracking-wide rounded-sm ${map[tone]}`}>{children}</span>;
-}
-
-function Health({ icon, label, ok }: { icon: React.ReactNode; label: string; ok: string }) {
-  return (
-    <div className="flex items-center justify-between">
-      <span className="flex items-center gap-1.5 text-muted-foreground">{icon}{label}</span>
-      <span className="text-gain flex items-center gap-1"><CheckCircle2 className="w-3 h-3" />{ok}</span>
-    </div>
-  );
-}
-
-/* ---------- Center ---------- */
-
-function CenterColumn() {
-  const [confirmClose, setConfirmClose] = useState<string | null>(null);
-  const [chartRange, setChartRange] = useState<"Today"|"Week"|"Month"|"All Time">("Today");
-
-  return (
-    <div className="flex flex-col gap-2 min-h-0">
-      <div className="panel flex flex-col">
-        <div className="panel-header"><span>Open Positions</span><span className="text-muted-foreground normal-case">{openPositions.length} active</span></div>
-        {openPositions.length === 0 ? (
-          <div className="p-6 text-center text-muted-foreground text-[12px]">No open positions — scanner is watching 20 tickers</div>
-        ) : (
-          <table className="w-full text-[12px]">
+        <div className="overflow-x-auto">
+          <table className="w-full text-[13px]">
             <thead>
-              <tr className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                <th className="text-left  font-normal px-3 py-2">Contract</th>
-                <th className="text-left  font-normal px-2 py-2">Side</th>
-                <th className="text-right font-normal px-2 py-2">Entry</th>
-                <th className="text-right font-normal px-2 py-2">Current</th>
-                <th className="text-right font-normal px-2 py-2">P&amp;L %</th>
-                <th className="text-right font-normal px-2 py-2">Peak</th>
-                <th className="text-right font-normal px-2 py-2">Size</th>
-                <th className="text-right font-normal px-2 py-2">Expiry</th>
-                <th className="text-left  font-normal px-2 py-2">Status</th>
-                <th className="px-2 py-2 w-8" />
+              <tr className="text-left text-[11px] uppercase tracking-wide text-muted-foreground border-b border-border">
+                <th className="py-2 px-2">Time</th>
+                <th className="py-2 px-2">Ticker</th>
+                <th className="py-2 px-2">Contract</th>
+                <th className="py-2 px-2 text-right">Entry → Exit</th>
+                <th className="py-2 px-2 text-right">P&L</th>
+                <th className="py-2 px-2">Why closed</th>
               </tr>
             </thead>
             <tbody>
-              {openPositions.map((p, i) => {
-                const positive = p.pnlPct >= 0;
-                const glow = p.pnlPct >= 20 ? "glow-gain" : p.pnlPct <= -10 ? "glow-loss" : "";
-                return (
-                  <tr key={p.contract} className={`group border-t border-border hover:bg-elevated ${glow} ${i % 2 ? "bg-background/40" : ""}`}>
-                    <td className="px-3 py-2 font-num">{p.contract}</td>
-                    <td className="px-2 py-2"><span className={p.side === "CALL" ? "text-gain" : "text-loss"}>{p.side}</span></td>
-                    <td className="px-2 py-2 text-right font-num">{p.entry.toFixed(2)}</td>
-                    <td className="px-2 py-2 text-right font-num">{p.current.toFixed(2)}</td>
-                    <td className={`px-2 py-2 text-right font-num ${positive ? "text-gain" : "text-loss"}`}>
-                      <div className="flex items-center justify-end gap-1.5">
-                        <span>{positive ? "+" : ""}{p.pnlPct.toFixed(1)}%</span>
-                        <span className="inline-block h-1 w-10 bg-elevated overflow-hidden rounded-sm">
-                          <span className={`block h-full ${positive ? "bg-gain" : "bg-loss"}`} style={{ width: `${Math.min(100, Math.abs(p.pnlPct) * 3)}%` }} />
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-2 py-2 text-right font-num text-muted-foreground">+{p.peakPct.toFixed(1)}%</td>
-                    <td className="px-2 py-2 text-right font-num">{p.size}</td>
-                    <td className="px-2 py-2 text-right font-num">{p.expiry}</td>
-                    <td className="px-2 py-2"><StatusPill status={p.status} /></td>
-                    <td className="px-2 py-2 text-right">
-                      <button onClick={() => setConfirmClose(p.contract)} className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-loss">
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
+              {recentTrades.map((t, i) => (
+                <tr key={i} className="border-b border-border/60 hover:bg-accent">
+                  <td className="py-2.5 px-2 text-muted-foreground font-num">{t.time}</td>
+                  <td className="py-2.5 px-2 font-medium">{t.ticker}</td>
+                  <td className="py-2.5 px-2 font-num">{t.strike} <span className="text-muted-foreground">{t.expiry}</span></td>
+                  <td className="py-2.5 px-2 text-right font-num">${t.entry.toFixed(2)} → ${t.exit.toFixed(2)}</td>
+                  <td className={`py-2.5 px-2 text-right font-num font-semibold ${t.pnl >= 0 ? "text-[var(--gain)]" : "text-[var(--loss)]"}`}>
+                    {t.pnl >= 0 ? "+" : ""}${t.pnl}
+                  </td>
+                  <td className="py-2.5 px-2">
+                    <Pill tone={t.reason.includes("Profit") ? "gain" : t.reason.includes("Stop") ? "loss" : "info"}>{t.reason}</Pill>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
-        )}
+        </div>
       </div>
+    </div>
+  );
+}
 
-      <div className="panel flex-1 min-h-0 flex flex-col">
-        <div className="panel-header">
-          <span>P&amp;L Curve</span>
-          <div className="flex gap-0.5 normal-case">
-            {(["Today","Week","Month","All Time"] as const).map(r => (
-              <button key={r}
-                onClick={() => setChartRange(r)}
-                className={`text-[11px] px-2 py-0.5 rounded-sm ${chartRange === r ? "bg-elevated text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-                {r}
-              </button>
+/* ------------------------------ INSIGHTS ------------------------------ */
+
+function InsightsView() {
+  return (
+    <div className="space-y-6">
+      <div className="grid lg:grid-cols-2 gap-6">
+        <div className="soft-card p-5">
+          <div className="flex items-center gap-2 mb-1">
+            <h2 className="font-semibold">Win rate by ticker</h2>
+            <Tip text="How often trades on each stock end profitable." />
+          </div>
+          <p className="text-[12px] text-muted-foreground mb-3">Higher = more reliable for Gilbert.</p>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={winRateByTicker} layout="vertical" margin={{ left: 10 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
+                <XAxis type="number" domain={[0, 100]} stroke="var(--muted-foreground)" fontSize={11} tickLine={false} axisLine={false} />
+                <YAxis dataKey="ticker" type="category" stroke="var(--muted-foreground)" fontSize={11} tickLine={false} axisLine={false} width={50} />
+                <Tooltip contentStyle={{ background: "var(--panel)", border: "1px solid var(--border)", borderRadius: 12, fontSize: 12 }} />
+                <Bar dataKey="winRate" radius={[0, 8, 8, 0]}>
+                  {winRateByTicker.map((d, i) => (
+                    <Cell key={i} fill={d.winRate >= 60 ? "var(--gain)" : d.winRate >= 50 ? "var(--primary)" : "var(--loss)"} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="soft-card p-5">
+          <div className="flex items-center gap-2 mb-1">
+            <h2 className="font-semibold">Why trades closed</h2>
+            <Tip text="The reason each trade ended — hitting profit target, stop loss, or other." />
+          </div>
+          <p className="text-[12px] text-muted-foreground mb-3">A healthy bot hits profit targets often.</p>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={exitReasons} dataKey="value" nameKey="name" innerRadius={55} outerRadius={90} paddingAngle={2}>
+                  {exitReasons.map((e, i) => <Cell key={i} fill={e.color} />)}
+                </Pie>
+                <Tooltip contentStyle={{ background: "var(--panel)", border: "1px solid var(--border)", borderRadius: 12, fontSize: 12 }} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="grid grid-cols-2 gap-2 mt-2">
+            {exitReasons.map(e => (
+              <div key={e.name} className="flex items-center gap-2 text-[12px]">
+                <span className="w-2.5 h-2.5 rounded-full" style={{ background: e.color }} />
+                <span className="text-muted-foreground">{e.name}</span>
+                <span className="ml-auto font-num">{e.value}</span>
+              </div>
             ))}
           </div>
         </div>
-        <div className="flex-1 min-h-[180px] p-2">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={pnlCurve} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
-              <defs>
-                <linearGradient id="g-gain" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#00c087" stopOpacity={0.35} />
-                  <stop offset="100%" stopColor="#00c087" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid stroke="#2a2d3e" vertical={false} strokeDasharray="2 4" />
-              <XAxis dataKey="t" stroke="#8b90a8" fontSize={10} tickLine={false} axisLine={false} />
-              <YAxis stroke="#8b90a8" fontSize={10} tickLine={false} axisLine={false} width={40} />
-              <Tooltip
-                contentStyle={{ background: "#13151f", border: "1px solid #2a2d3e", fontSize: 11 }}
-                labelStyle={{ color: "#8b90a8" }}
-                formatter={(v: number) => [`$${v}`, "P&L"]}
-              />
-              <Area type="monotone" dataKey="v" stroke="#00c087" strokeWidth={1.5} fill="url(#g-gain)" />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
       </div>
 
-      <div className="panel">
-        <div className="panel-header"><span>Recent Trades</span></div>
-        <div className="max-h-[260px] overflow-auto">
-          <table className="w-full text-[12px]">
-            <thead className="sticky top-0 bg-panel">
-              <tr className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                <th className="text-left font-normal px-3 py-2">Time</th>
-                <th className="text-left font-normal px-2 py-2">Ticker</th>
-                <th className="text-left font-normal px-2 py-2">Strike</th>
-                <th className="text-left font-normal px-2 py-2">Expiry</th>
-                <th className="text-left font-normal px-2 py-2">Side</th>
-                <th className="text-right font-normal px-2 py-2">Entry</th>
-                <th className="text-right font-normal px-2 py-2">Exit</th>
-                <th className="text-right font-normal px-2 py-2">P&amp;L $</th>
-                <th className="text-left font-normal px-2 py-2">Reason</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentTrades.map((t, i) => {
-                const positive = t.pnl >= 0;
-                return (
-                  <tr key={i} className={`border-t border-border hover:bg-elevated ${positive ? "border-l-2 border-l-gain" : "border-l-2 border-l-loss"} ${i % 2 ? "bg-background/40" : ""}`}>
-                    <td className="px-3 py-1.5 font-num text-muted-foreground">{t.time}</td>
-                    <td className="px-2 py-1.5 font-num">{t.ticker}</td>
-                    <td className="px-2 py-1.5 font-num">{t.strike}</td>
-                    <td className="px-2 py-1.5 font-num">{t.expiry}</td>
-                    <td className={`px-2 py-1.5 ${t.side === "CALL" ? "text-gain" : "text-loss"}`}>{t.side}</td>
-                    <td className="px-2 py-1.5 text-right font-num">{t.entry.toFixed(2)}</td>
-                    <td className="px-2 py-1.5 text-right font-num">{t.exit.toFixed(2)}</td>
-                    <td className={`px-2 py-1.5 text-right font-num ${positive ? "text-gain" : "text-loss"}`}>{positive ? "+" : ""}${t.pnl.toFixed(0)}</td>
-                    <td className="px-2 py-1.5 text-muted-foreground">{t.reason}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+      <div className="soft-card p-5">
+        <div className="flex items-center gap-2 mb-3">
+          <h2 className="font-semibold">Key numbers</h2>
+          <Tip text="A quick health check on Gilbert's overall trading." />
         </div>
-      </div>
-
-      {confirmClose && <ConfirmModal contract={confirmClose} onClose={() => setConfirmClose(null)} />}
-    </div>
-  );
-}
-
-function StatusPill({ status }: { status: string }) {
-  const styles: Record<string, string> = {
-    "Monitoring":  "bg-primary/15 text-primary",
-    "Near TP":     "bg-gain/15 text-gain",
-    "Near SL":     "bg-loss/15 text-loss",
-    "Scaling Out": "bg-warn/15 text-warn",
-  };
-  const pulse = status === "Near TP" || status === "Near SL";
-  return (
-    <span className={`text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded-sm ${styles[status]}`}>
-      {pulse && <span className="inline-block w-1 h-1 rounded-full bg-current mr-1 align-middle pulse-green" />}
-      {status}
-    </span>
-  );
-}
-
-function ConfirmModal({ contract, onClose }: { contract: string; onClose: () => void }) {
-  return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-      <div className="panel w-[380px]">
-        <div className="panel-header"><span>Close Position</span><button onClick={onClose}><X className="w-3 h-3"/></button></div>
-        <div className="p-4">
-          <p className="text-[13px] text-foreground mb-1">Are you sure?</p>
-          <p className="text-[12px] text-muted-foreground mb-4">This will place a market STC order for <span className="font-num text-foreground">{contract}</span>.</p>
-          <div className="flex justify-end gap-2">
-            <button onClick={onClose} className="px-3 py-1.5 text-[12px] border border-border rounded-sm hover:bg-elevated">Cancel</button>
-            <button onClick={onClose} className="px-3 py-1.5 text-[12px] bg-loss text-white rounded-sm hover:opacity-90">Close Position</button>
-          </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { l: "Sharpe ratio", v: quickStats.sharpe.toFixed(2), t: "Risk-adjusted returns. Above 1 is good." },
+            { l: "Max drawdown", v: `$${quickStats.maxDrawdown}`, t: "Biggest peak-to-trough loss seen." },
+            { l: "Expectancy", v: `+$${quickStats.expectancy}`, t: "Average expected profit per trade." },
+            { l: "Total trades", v: quickStats.totalTrades, t: "Trades placed all-time." },
+          ].map(s => (
+            <div key={s.l} className="rounded-xl bg-muted/60 p-3">
+              <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">{s.l} <Tip text={s.t} /></div>
+              <div className="text-lg font-semibold font-num mt-1">{s.v}</div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
   );
 }
 
-/* ---------- Right column ---------- */
+/* ------------------------------ ACTIVITY ------------------------------ */
 
-function RightColumn() {
-  const [scanner, setScanner] = useState<ScannerEntry[]>(initialScanner);
-  const idRef = useRef(100);
+function ActivityView() {
+  const [feed, setFeed] = useState<ScannerEntry[]>(initialScanner);
+  const idRef = useRef(initialScanner.length + 1);
+
   useEffect(() => {
     const id = setInterval(() => {
-      setScanner(prev => [makeScannerEntry(idRef.current++), ...prev].slice(0, 30));
+      setFeed(f => [makeScannerEntry(idRef.current++), ...f].slice(0, 40));
     }, 2200);
     return () => clearInterval(id);
   }, []);
 
   return (
-    <div className="flex flex-col gap-2 min-h-0">
-      <div className="panel flex flex-col min-h-0 flex-1">
-        <div className="panel-header">
-          <span className="flex items-center gap-1.5">Scanner <span className="w-1.5 h-1.5 rounded-full bg-gain pulse-green" /></span>
-          <span className="text-muted-foreground normal-case font-num">{scanner.length}</span>
-        </div>
-        <div className="flex-1 overflow-auto font-num text-[11px] leading-tight">
-          {scanner.map((s, i) => {
-            const color = s.kind === "signal" ? "text-gain" : s.kind === "blocked" ? "text-loss" : "text-muted-foreground";
-            return (
-              <div key={s.id} className={`px-2 py-1 ${i === 0 ? "flash-row" : ""} ${color} border-b border-border/50`}>
-                <span className="text-muted-foreground">{s.time}</span>{" "}
-                <span className="text-foreground">{s.ticker.padEnd(5)}</span>{" "}
-                <span>{s.detail}</span>
-              </div>
-            );
-          })}
-        </div>
+    <div className="soft-card p-5">
+      <div className="flex items-center gap-2 mb-1">
+        <h2 className="font-semibold">Live scanner</h2>
+        <Pill tone="gain"><span className="w-1.5 h-1.5 rounded-full bg-[var(--gain)] pulse-green" /> Live</Pill>
+        <Tip text="Every few seconds Gilbert checks the market. Each row is a stock it looked at and its decision." />
       </div>
-
-      <div className="panel">
-        <div className="panel-header"><span>Signal Queue</span></div>
-        <div className="p-2 space-y-1.5 text-[11px]">
-          {signalQueue.map((s, i) => (
-            <div key={i} className="flex items-start justify-between gap-2 p-1.5 bg-background border border-border rounded-sm">
-              <div className="min-w-0">
-                <div className="font-num text-foreground">{s.ticker}</div>
-                <div className="text-muted-foreground truncate">{s.text}</div>
-              </div>
-              <div className={`shrink-0 ${s.state === "Approved" ? "text-gain" : s.state === "Rejected" ? "text-loss" : "text-warn"}`}>
-                {s.state === "Analyzing" ? "…" : s.state === "Approved" ? "✓" : "✗"}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="panel">
-        <div className="panel-header"><span>Quick Stats</span></div>
-        <div className="grid grid-cols-2 gap-px bg-border text-[11px]">
-          <Stat label="Total Trades" value={quickStats.totalTrades.toString()} />
-          <Stat label="Win Rate"     value={`${quickStats.winRate}%`} tone="gain" />
-          <Stat label="Avg Win"      value={`+$${quickStats.avgWin}`} tone="gain" />
-          <Stat label="Avg Loss"     value={`$${quickStats.avgLoss}`} tone="loss" />
-          <Stat label="Expectancy"   value={`+$${quickStats.expectancy}`} tone="gain" />
-          <Stat label="Max Drawdown" value={`$${quickStats.maxDrawdown}`} tone="loss" />
-          <Stat label="Sharpe"       value={quickStats.sharpe.toFixed(2)} />
-          <Stat label="Profit Factor" value="2.31" tone="gain" />
-        </div>
-      </div>
-
-      <DiscordPanel />
-    </div>
-  );
-}
-
-function Stat({ label, value, tone }: { label: string; value: string; tone?: "gain" | "loss" }) {
-  const c = tone === "gain" ? "text-gain" : tone === "loss" ? "text-loss" : "text-foreground";
-  return (
-    <div className="bg-panel p-2">
-      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
-      <div className={`font-num text-[14px] mt-0.5 ${c}`}>{value}</div>
-    </div>
-  );
-}
-
-const COMMANDS = ["!status", "!scan", "!pause", "!resume", "!close ALL", "!profile"];
-
-function DiscordPanel() {
-  const [history, setHistory] = useState([
-    { cmd: "!status", res: "Bot active · 3 open · P&L +$304.18" },
-    { cmd: "!scan",   res: "Scanner cycle complete — 1 signal (META)" },
-    { cmd: "!profile", res: "Strategy NORMAL · TP 25% · SL 15%" },
-  ]);
-  const [input, setInput] = useState("");
-  const [showAuto, setShowAuto] = useState(false);
-
-  const matches = COMMANDS.filter(c => c.startsWith(input) && input.length > 0);
-
-  const send = (cmd?: string) => {
-    const c = (cmd || input).trim();
-    if (!c) return;
-    setHistory(h => [...h.slice(-4), { cmd: c, res: "OK · " + c.replace("!", "") + " executed" }]);
-    setInput("");
-    setShowAuto(false);
-  };
-
-  return (
-    <div className="panel flex flex-col">
-      <div className="panel-header"><span>Discord</span></div>
-      <div className="p-2 space-y-1 text-[11px] font-num max-h-[140px] overflow-auto">
-        {history.map((h, i) => (
-          <div key={i}>
-            <div className="text-primary">&gt; {h.cmd}</div>
-            <div className="text-muted-foreground pl-2">{h.res}</div>
+      <p className="text-[12px] text-muted-foreground mb-4">
+        Gilbert is constantly checking conditions like RSI (momentum) and Volume to find good trades. Most checks are skipped — that's normal.
+      </p>
+      <div className="space-y-1.5 max-h-[480px] overflow-y-auto pr-1">
+        {feed.map((e, i) => (
+          <div
+            key={e.id}
+            className={`flex items-center gap-3 px-3 py-2 rounded-lg border border-border/70 text-[13px] ${i === 0 ? "flash-row" : ""}`}
+          >
+            <span className="text-[11px] text-muted-foreground font-num w-20 shrink-0">{e.time}</span>
+            <span className="font-semibold w-14 shrink-0">{e.ticker}</span>
+            <span className="text-muted-foreground flex-1 truncate">{e.detail}</span>
+            <Pill tone={e.kind === "signal" ? "gain" : e.kind === "blocked" ? "warn" : "muted"}>
+              {e.kind === "signal" ? "Trade" : e.kind === "blocked" ? "Blocked" : "Skipped"}
+            </Pill>
           </div>
         ))}
       </div>
-      <div className="relative border-t border-border">
-        {showAuto && matches.length > 0 && (
-          <div className="absolute bottom-full left-0 right-0 bg-elevated border border-border max-h-32 overflow-auto">
-            {matches.map(m => (
-              <button key={m} onClick={() => send(m)}
-                className="block w-full text-left px-2 py-1 text-[11px] font-num hover:bg-background text-foreground">
-                {m}
-              </button>
-            ))}
-          </div>
-        )}
-        <div className="flex items-center px-2 h-8">
-          <span className="text-primary mr-1 font-num">&gt;</span>
-          <input
-            value={input}
-            onChange={e => { setInput(e.target.value); setShowAuto(true); }}
-            onKeyDown={e => e.key === "Enter" && send()}
-            onFocus={() => setShowAuto(true)}
-            onBlur={() => setTimeout(() => setShowAuto(false), 150)}
-            placeholder="!status"
-            className="flex-1 bg-transparent text-[12px] font-num outline-none text-foreground placeholder:text-muted-foreground"
-          />
-          <button onClick={() => send()} className="text-muted-foreground hover:text-primary"><Send className="w-3 h-3" /></button>
+    </div>
+  );
+}
+
+/* ------------------------------- LEARN ------------------------------- */
+
+function LearnView() {
+  const items = [
+    { q: "What is RSI?", a: "RSI (Relative Strength Index) measures momentum. Below 30 = stock may be oversold (a buy signal), above 70 = overbought." },
+    { q: "What's a CALL vs a PUT?", a: "A CALL profits when a stock goes UP. A PUT profits when it goes DOWN. Gilbert picks based on the setup." },
+    { q: "What is a stop loss?", a: "A safety net — if a trade loses a set amount, it auto-closes so you can't lose more than planned." },
+    { q: "What is a profit target?", a: "The point where Gilbert auto-closes a winning trade to lock in gains." },
+    { q: "What does 'Paper mode' mean?", a: "Trades are simulated with fake money. Great for learning without risk before going live." },
+    { q: "What's a good win rate?", a: "Anywhere between 50–70% is healthy, as long as wins are bigger than losses on average." },
+  ];
+  return (
+    <div className="space-y-4">
+      <div className="soft-card p-6 bg-gradient-to-br from-[var(--info-soft)] to-panel">
+        <div className="flex items-center gap-3 mb-2">
+          <BookOpen className="w-5 h-5 text-primary" />
+          <h2 className="font-semibold text-lg">New to trading?</h2>
         </div>
+        <p className="text-[13px] text-muted-foreground max-w-2xl">
+          No worries — Gilbert handles the hard parts. Here are the words and ideas you'll see most often.
+        </p>
       </div>
-    </div>
-  );
-}
-
-/* ---------- Analytics ---------- */
-
-function Analytics() {
-  return (
-    <div className="flex-1 grid grid-cols-12 gap-2 p-2 auto-rows-[minmax(220px,auto)] overflow-auto">
-      <ChartPanel title="Win Rate by Ticker" className="col-span-6">
-        <ResponsiveContainer>
-          <BarChart layout="vertical" data={winRateByTicker} margin={{ left: 8, right: 16, top: 4, bottom: 4 }}>
-            <CartesianGrid stroke="#2a2d3e" horizontal={false} strokeDasharray="2 4" />
-            <XAxis type="number" stroke="#8b90a8" fontSize={10} domain={[0, 100]} tickLine={false} axisLine={false} />
-            <YAxis type="category" dataKey="ticker" stroke="#8b90a8" fontSize={10} width={50} tickLine={false} axisLine={false} />
-            <Tooltip contentStyle={{ background: "#13151f", border: "1px solid #2a2d3e", fontSize: 11 }} />
-            <Bar dataKey="winRate" radius={[0, 2, 2, 0]}>
-              {winRateByTicker.map((d, i) => <Cell key={i} fill={d.winRate >= 50 ? "#00c087" : "#ff5252"} />)}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </ChartPanel>
-
-      <ChartPanel title="P&L by Hour (ET)" className="col-span-6">
-        <ResponsiveContainer>
-          <BarChart data={hourHeatmap}>
-            <CartesianGrid stroke="#2a2d3e" vertical={false} strokeDasharray="2 4" />
-            <XAxis dataKey="hour" stroke="#8b90a8" fontSize={10} tickLine={false} axisLine={false} />
-            <YAxis stroke="#8b90a8" fontSize={10} tickLine={false} axisLine={false} />
-            <Tooltip contentStyle={{ background: "#13151f", border: "1px solid #2a2d3e", fontSize: 11 }} />
-            <Bar dataKey="v">
-              {hourHeatmap.map((d, i) => <Cell key={i} fill={d.v >= 0 ? "#00c087" : "#ff5252"} />)}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </ChartPanel>
-
-      <ChartPanel title="Drawdown Over Time" className="col-span-8">
-        <ResponsiveContainer>
-          <AreaChart data={drawdownSeries}>
-            <defs>
-              <linearGradient id="g-loss" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#ff5252" stopOpacity={0.4} />
-                <stop offset="100%" stopColor="#ff5252" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid stroke="#2a2d3e" vertical={false} strokeDasharray="2 4" />
-            <XAxis dataKey="d" stroke="#8b90a8" fontSize={10} tickLine={false} axisLine={false} />
-            <YAxis stroke="#8b90a8" fontSize={10} tickLine={false} axisLine={false} />
-            <Tooltip contentStyle={{ background: "#13151f", border: "1px solid #2a2d3e", fontSize: 11 }} />
-            <Area type="monotone" dataKey="dd" stroke="#ff5252" strokeWidth={1.5} fill="url(#g-loss)" />
-          </AreaChart>
-        </ResponsiveContainer>
-      </ChartPanel>
-
-      <ChartPanel title="Exit Reasons" className="col-span-4">
-        <ResponsiveContainer>
-          <PieChart>
-            <Pie data={exitReasons} dataKey="value" nameKey="name" innerRadius={40} outerRadius={70} stroke="#13151f">
-              {exitReasons.map((d, i) => <Cell key={i} fill={d.color} />)}
-            </Pie>
-            <Tooltip contentStyle={{ background: "#13151f", border: "1px solid #2a2d3e", fontSize: 11 }} />
-            <Legend wrapperStyle={{ fontSize: 10, color: "#8b90a8" }} />
-          </PieChart>
-        </ResponsiveContainer>
-      </ChartPanel>
-
-      <ChartPanel title="Trade Distribution" className="col-span-6">
-        <ResponsiveContainer>
-          <BarChart data={tradeDistribution}>
-            <CartesianGrid stroke="#2a2d3e" vertical={false} strokeDasharray="2 4" />
-            <XAxis dataKey="bucket" stroke="#8b90a8" fontSize={10} tickLine={false} axisLine={false} />
-            <YAxis stroke="#8b90a8" fontSize={10} tickLine={false} axisLine={false} />
-            <Tooltip contentStyle={{ background: "#13151f", border: "1px solid #2a2d3e", fontSize: 11 }} />
-            <Bar dataKey="n">
-              {tradeDistribution.map((d, i) => <Cell key={i} fill={Number(d.bucket) >= 0 ? "#00c087" : "#ff5252"} />)}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </ChartPanel>
-
-      <ChartPanel title="Avg Win vs Avg Loss by Ticker" className="col-span-6">
-        <ResponsiveContainer>
-          <BarChart data={avgWinLossByTicker}>
-            <CartesianGrid stroke="#2a2d3e" vertical={false} strokeDasharray="2 4" />
-            <XAxis dataKey="ticker" stroke="#8b90a8" fontSize={10} tickLine={false} axisLine={false} />
-            <YAxis stroke="#8b90a8" fontSize={10} tickLine={false} axisLine={false} />
-            <Tooltip contentStyle={{ background: "#13151f", border: "1px solid #2a2d3e", fontSize: 11 }} />
-            <Legend wrapperStyle={{ fontSize: 10, color: "#8b90a8" }} />
-            <Bar dataKey="win" fill="#00c087" />
-            <Bar dataKey="loss" fill="#ff5252" />
-          </BarChart>
-        </ResponsiveContainer>
-      </ChartPanel>
-    </div>
-  );
-}
-
-function ChartPanel({ title, children, className = "" }: { title: string; children: React.ReactNode; className?: string }) {
-  return (
-    <div className={`panel flex flex-col ${className}`}>
-      <div className="panel-header"><span>{title}</span></div>
-      <div className="flex-1 p-2 min-h-[200px]">{children}</div>
-    </div>
-  );
-}
-
-/* ---------- Bot Log ---------- */
-
-function BotLog() {
-  const [filter, setFilter] = useState("");
-  const filtered = botLog.filter(l => (l.msg + l.lvl).toLowerCase().includes(filter.toLowerCase()));
-  return (
-    <div className="flex-1 p-2 min-h-0 flex">
-      <div className="panel flex-1 flex flex-col min-h-0">
-        <div className="panel-header">
-          <span>brain.log — last 100 lines</span>
-          <div className="flex items-center gap-1 normal-case">
-            <Search className="w-3 h-3 text-muted-foreground" />
-            <input
-              value={filter}
-              onChange={e => setFilter(e.target.value)}
-              placeholder="filter..."
-              className="bg-background border border-border rounded-sm px-2 py-0.5 text-[11px] font-num outline-none focus:border-primary"
-            />
+      <div className="grid md:grid-cols-2 gap-3">
+        {items.map(it => (
+          <div key={it.q} className="soft-card p-4">
+            <div className="font-medium text-[14px]">{it.q}</div>
+            <p className="text-[13px] text-muted-foreground mt-1">{it.a}</p>
           </div>
-        </div>
-        <div className="flex-1 overflow-auto font-num text-[11px] p-2 leading-relaxed">
-          {filtered.map((l, i) => {
-            const c =
-              l.lvl === "ERROR" ? "text-loss" :
-              l.lvl === "WARN"  ? "text-warn" :
-              l.lvl === "TRADE" ? "text-gain" :
-              "text-muted-foreground";
-            return (
-              <div key={i} className="hover:bg-elevated px-1">
-                <span className="text-muted-foreground">{l.t}</span>{" "}
-                <span className={`${c} w-12 inline-block`}>[{l.lvl}]</span>{" "}
-                <span className="text-foreground">{l.msg}</span>
-              </div>
-            );
-          })}
-        </div>
+        ))}
       </div>
     </div>
   );
