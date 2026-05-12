@@ -629,33 +629,3 @@ function ActivityView() {
   );
 }
 
-/* ------------------------------- LEARN ------------------------------- */
-
-function LearnView() {
-  const items = [
-    { q: "What is RSI?", a: "RSI (Relative Strength Index) measures momentum. Below 30 = stock may be oversold (a buy signal), above 70 = overbought." },
-    { q: "What's a CALL vs a PUT?", a: "A CALL profits when a stock goes UP. A PUT profits when it goes DOWN. Gilbert picks based on the setup." },
-    { q: "What is a stop loss?", a: "A safety net — if a trade loses a set amount, it auto-closes so you can't lose more than planned." },
-    { q: "What is a profit target?", a: "The point where Gilbert auto-closes a winning trade to lock in gains." },
-    { q: "What does 'Paper mode' mean?", a: "Trades are simulated with fake money. Great for learning without risk before going live." },
-    { q: "What's a good win rate?", a: "Anywhere between 50–70% is healthy, as long as wins are bigger than losses on average." },
-    { q: "What is buying power?", a: "How much money you have available to open new trades right now." },
-    { q: "Sharpe ratio?", a: "Measures returns relative to risk. Above 1 is good, above 2 is excellent." },
-  ];
-  return (
-    <div className="space-y-4">
-      <div className="soft-card p-6 bg-gradient-to-br from-[var(--info-soft)] to-panel">
-        <div className="flex items-center gap-3 mb-2"><BookOpen className="w-5 h-5 text-primary" /><h2 className="font-semibold text-lg">New to trading?</h2></div>
-        <p className="text-[13px] text-muted-foreground max-w-2xl">No worries — Gilbert handles the hard parts. Here are the words and ideas you'll see most often.</p>
-      </div>
-      <div className="grid md:grid-cols-2 gap-3">
-        {items.map(it => (
-          <div key={it.q} className="soft-card p-4">
-            <div className="font-medium text-[14px]">{it.q}</div>
-            <p className="text-[13px] text-muted-foreground mt-1">{it.a}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
