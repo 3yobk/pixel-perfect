@@ -475,7 +475,7 @@ function TodayView({ running }: { running: boolean }) {
 
         {/* Range selector */}
         <div className="mt-3 flex items-center justify-center">
-          <RangeTabs value={range} onChange={(r) => { setRange(r); setHover(null); }} />
+          <FullRangeTabs value={range} onChange={(r) => { setRange(r); setHover(null); }} />
         </div>
       </div>
 
