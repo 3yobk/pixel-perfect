@@ -323,7 +323,7 @@ function TodayView({ running }: { running: boolean }) {
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard label="Open trades" tip="Trades that are still active." value={positions ? `${positions.length}` : "—"} tone="info" sub="being monitored" />
-        <StatCard label="Win rate"    tip="Percent of trades that ended profitable." value={stats ? `${stats.winRate}%` : "—"} tone="gain" sub={stats ? `${stats.totalTrades} trades` : ""} />
+        <StatCard label="Win rate"    tip="Percent of trades that ended profitable." value={stats ? `${stats.winRate.toFixed(1)}%` : "—"} tone="gain" sub={stats ? `${stats.totalTrades} trades` : ""} />
         <StatCard label="Avg win"     tip="Average dollars made on winning trades." value={stats ? `+${fmtMoney(stats.avgWin)}` : "—"} tone="gain" sub="per trade" />
         <StatCard label="Avg loss"    tip="Average dollars lost on losing trades." value={stats ? fmtMoney(stats.avgLoss) : "—"} tone="loss" sub="per trade" />
       </div>
