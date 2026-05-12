@@ -1031,25 +1031,116 @@ function WatchlistView() {
 function ActivityView() {
   const feed = useScannerStream(40);
   return (
-    <div className="soft-card p-5">
-      <div className="flex items-center gap-2 mb-1">
-        <h2 className="font-semibold">Live scanner</h2>
-        <Pill tone="gain"><span className="w-1.5 h-1.5 rounded-full bg-[var(--gain)] pulse-green" /> Live</Pill>
-        <Tip text="Every few seconds Gilbert checks the market. Each row is its decision on a stock." />
+    <div className="space-y-6">
+      <div className="soft-card p-5">
+        <div className="flex items-center gap-2 mb-1">
+          <h2 className="font-semibold">Live scanner</h2>
+          <Pill tone="gain"><span className="w-1.5 h-1.5 rounded-full bg-[var(--gain)] pulse-green" /> Live</Pill>
+          <Tip text="Every few seconds Gilbert checks the market. Each row is its decision on a stock." />
+        </div>
+        <p className="text-[12px] text-muted-foreground mb-4">Most checks are skipped — that's normal. Gilbert only trades when conditions are great.</p>
+        <div className="space-y-1.5 pr-1">
+          {feed.map((e, i) => (
+            <div key={e.id} className={`flex items-center gap-3 px-3 py-2 rounded-lg border border-border/70 text-[13px] ${i === 0 ? "flash-row" : ""}`}>
+              <span className="text-[11px] text-muted-foreground font-num w-20 shrink-0">{e.time}</span>
+              <span className="font-semibold w-14 shrink-0">{e.ticker}</span>
+              <span className="text-muted-foreground flex-1 truncate">{e.detail}</span>
+              <Pill tone={e.kind === "signal" ? "gain" : e.kind === "blocked" ? "warn" : "muted"}>
+                {e.kind === "signal" ? "Trade" : e.kind === "blocked" ? "Blocked" : "Skipped"}
+              </Pill>
+            </div>
+          ))}
+        </div>
       </div>
-      <p className="text-[12px] text-muted-foreground mb-4">Most checks are skipped — that's normal. Gilbert only trades when conditions are great.</p>
-      <div className="space-y-1.5 pr-1">
-        {feed.map((e, i) => (
-          <div key={e.id} className={`flex items-center gap-3 px-3 py-2 rounded-lg border border-border/70 text-[13px] ${i === 0 ? "flash-row" : ""}`}>
-            <span className="text-[11px] text-muted-foreground font-num w-20 shrink-0">{e.time}</span>
-            <span className="font-semibold w-14 shrink-0">{e.ticker}</span>
-            <span className="text-muted-foreground flex-1 truncate">{e.detail}</span>
-            <Pill tone={e.kind === "signal" ? "gain" : e.kind === "blocked" ? "warn" : "muted"}>
-              {e.kind === "signal" ? "Trade" : e.kind === "blocked" ? "Blocked" : "Skipped"}
-            </Pill>
+      <DiscordTerminal />
+    </div>
+  );
+}
+
+const COMMANDS = ["!status", "!scan", "!pause", "!resume", "!close ALL", "!watchlist", "!help"];
+
+function DiscordTerminal() {
+  type Entry = { ts: string; cmd: string; resp: string };
+  const [log, setLog] = useState<Entry[]>([]);
+  const [input, setInput] = useState("");
+  const showSuggest = input.startsWith("!");
+  const filtered = COMMANDS.filter(c => c.startsWith(input));
+
+  const send = async (raw?: string) => {
+    const cmd = (raw ?? input).trim();
+    if (!cmd) return;
+    const ts = new Date().toLocaleTimeString("en-US", { hour12: false });
+    setInput("");
+    let resp = "Sent.";
+    try {
+      const r = await fetch(`${API_BASE}/api/bot/command`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ command: cmd }),
+      });
+      if (r.ok) {
+        const data = await r.json().catch(() => null);
+        resp = data?.response ?? data?.message ?? "ok";
+      } else {
+        resp = "(no response)";
+      }
+    } catch {
+      resp = "(offline)";
+    }
+    setLog(prev => [...prev.slice(-9), { ts, cmd, resp }]);
+  };
+
+  return (
+    <div className="soft-card p-5">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Discord Commands</h3>
+        <span className="text-[10px] text-muted-foreground">{log.length}/10</span>
+      </div>
+      <div className="rounded-lg bg-muted/40 border border-border p-3 h-44 overflow-y-auto font-mono text-[12px] space-y-2">
+        {log.length === 0 ? (
+          <div className="text-muted-foreground text-[11px]">Type a command below. Try !help</div>
+        ) : log.slice(-5).map((e, i) => (
+          <div key={i}>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-muted-foreground">{e.ts}</span>
+              <span className="text-foreground">{e.cmd}</span>
+            </div>
+            <div className="text-muted-foreground pl-4">→ {e.resp}</div>
           </div>
         ))}
       </div>
+      <form
+        onSubmit={(e) => { e.preventDefault(); send(); }}
+        className="relative mt-3 flex items-center gap-2"
+      >
+        {showSuggest && filtered.length > 0 && (
+          <div className="absolute bottom-full mb-2 left-0 soft-card p-1 w-56 z-10">
+            {filtered.map(c => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => { setInput(c); }}
+                className="w-full text-left px-3 py-1.5 rounded-md text-[12px] font-mono hover:bg-muted text-foreground"
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+        )}
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="!command"
+          className="flex-1 bg-muted/70 border-0 rounded-full px-4 py-2 text-[13px] font-mono placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+        />
+        <button
+          type="submit"
+          disabled={!input.trim()}
+          className="px-4 py-2 rounded-full bg-primary text-primary-foreground text-[12px] font-semibold inline-flex items-center gap-1.5 disabled:opacity-50"
+        >
+          <Send className="w-3.5 h-3.5" /> Send
+        </button>
+      </form>
     </div>
   );
 }
