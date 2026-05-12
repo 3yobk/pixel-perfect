@@ -415,35 +415,66 @@ function PositionsView() {
       {!positions ? <Skeleton className="h-40 w-full" /> : positions.length === 0 ? (
         <div className="text-center py-10 text-[13px] text-muted-foreground">No open positions for this range.</div>
       ) : (
-      <div className="overflow-x-auto">
-        <table className="w-full text-[13px]">
-          <thead>
-            <tr className="text-left text-[11px] uppercase tracking-wide text-muted-foreground border-b border-border">
-              <th className="py-2 px-2">Contract</th><th className="py-2 px-2">Side</th>
-              <th className="py-2 px-2 text-right">Entry</th><th className="py-2 px-2 text-right">Current</th>
-              <th className="py-2 px-2 text-right">P&L</th><th className="py-2 px-2 text-right">Peak</th>
-              <th className="py-2 px-2">Expiry</th><th className="py-2 px-2">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {positions.map(p => {
-              const positive = p.pnlPct >= 0;
-              return (
-                <tr key={p.contract} className="border-b border-border/60 hover:bg-accent">
-                  <td className="py-3 px-2 font-medium">{p.contract}</td>
-                  <td className="py-3 px-2"><Pill tone={p.side === "CALL" ? "gain" : "loss"}>{p.side}</Pill></td>
-                  <td className="py-3 px-2 text-right font-num">${p.entry.toFixed(2)}</td>
-                  <td className="py-3 px-2 text-right font-num">${p.current.toFixed(2)}</td>
-                  <td className={`py-3 px-2 text-right font-num font-semibold ${positive ? "text-[var(--gain)]" : "text-[var(--loss)]"}`}>{positive ? "+" : ""}{p.pnlPct.toFixed(1)}%</td>
-                  <td className="py-3 px-2 text-right font-num text-muted-foreground">{p.peakPct.toFixed(1)}%</td>
-                  <td className="py-3 px-2 text-muted-foreground">{p.expiry}</td>
-                  <td className="py-3 px-2"><Pill tone={p.status === "Near SL" ? "loss" : p.status === "Near TP" ? "gain" : "info"}>{p.status}</Pill></td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>)}
+      <>
+        {/* Mobile: card list */}
+        <div className="md:hidden space-y-2">
+          {positions.map(p => {
+            const positive = p.pnlPct >= 0;
+            return (
+              <div key={p.contract} className="rounded-xl border border-border p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-semibold text-[14px] truncate">{p.contract}</span>
+                    <Pill tone={p.side === "CALL" ? "gain" : "loss"}>{p.side}</Pill>
+                  </div>
+                  <span className={`font-num font-semibold text-[14px] ${positive ? "text-[var(--gain)]" : "text-[var(--loss)]"}`}>
+                    {positive ? "+" : ""}{p.pnlPct.toFixed(1)}%
+                  </span>
+                </div>
+                <div className="mt-2 grid grid-cols-3 gap-2 text-[11px] text-muted-foreground font-num">
+                  <div><div className="text-[10px] uppercase">Entry</div><div className="text-foreground">${p.entry.toFixed(2)}</div></div>
+                  <div><div className="text-[10px] uppercase">Now</div><div className="text-foreground">${p.current.toFixed(2)}</div></div>
+                  <div><div className="text-[10px] uppercase">Peak</div><div className="text-foreground">{p.peakPct.toFixed(1)}%</div></div>
+                </div>
+                <div className="mt-2 flex items-center justify-between text-[11px]">
+                  <span className="text-muted-foreground">Exp {p.expiry}</span>
+                  <Pill tone={p.status === "Near SL" ? "loss" : p.status === "Near TP" ? "gain" : "info"}>{p.status}</Pill>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        {/* Desktop: table */}
+        <div className="hidden md:block overflow-x-auto">
+          <table className="w-full text-[13px]">
+            <thead>
+              <tr className="text-left text-[11px] uppercase tracking-wide text-muted-foreground border-b border-border">
+                <th className="py-2 px-2">Contract</th><th className="py-2 px-2">Side</th>
+                <th className="py-2 px-2 text-right">Entry</th><th className="py-2 px-2 text-right">Current</th>
+                <th className="py-2 px-2 text-right">P&L</th><th className="py-2 px-2 text-right">Peak</th>
+                <th className="py-2 px-2">Expiry</th><th className="py-2 px-2">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {positions.map(p => {
+                const positive = p.pnlPct >= 0;
+                return (
+                  <tr key={p.contract} className="border-b border-border/60 hover:bg-accent">
+                    <td className="py-3 px-2 font-medium">{p.contract}</td>
+                    <td className="py-3 px-2"><Pill tone={p.side === "CALL" ? "gain" : "loss"}>{p.side}</Pill></td>
+                    <td className="py-3 px-2 text-right font-num">${p.entry.toFixed(2)}</td>
+                    <td className="py-3 px-2 text-right font-num">${p.current.toFixed(2)}</td>
+                    <td className={`py-3 px-2 text-right font-num font-semibold ${positive ? "text-[var(--gain)]" : "text-[var(--loss)]"}`}>{positive ? "+" : ""}{p.pnlPct.toFixed(1)}%</td>
+                    <td className="py-3 px-2 text-right font-num text-muted-foreground">{p.peakPct.toFixed(1)}%</td>
+                    <td className="py-3 px-2 text-muted-foreground">{p.expiry}</td>
+                    <td className="py-3 px-2"><Pill tone={p.status === "Near SL" ? "loss" : p.status === "Near TP" ? "gain" : "info"}>{p.status}</Pill></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </>)}
     </div>
   );
 }
