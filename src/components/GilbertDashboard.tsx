@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import {
-  Activity, Bot, Sparkles, TrendingUp, TrendingDown, HelpCircle, BookOpen,
-  Zap, Shield, Target, Clock, PlayCircle, PauseCircle, Eye, Wallet, ArrowUpRight, ArrowDownRight,
+  Activity, Bot, Sparkles, TrendingUp, HelpCircle,
+  Zap, Shield, Target, Clock, PlayCircle, PauseCircle, Eye, Wallet,
+  ArrowUpRight, ArrowDownRight, Search, Bell, User,
 } from "lucide-react";
 import {
   Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Line, LineChart,
@@ -13,19 +14,34 @@ import {
 } from "@/hooks/useData";
 import type { Range } from "@/lib/provider";
 
-type Tab = "Today" | "Positions" | "History" | "Insights" | "Watchlist" | "Activity" | "Learn";
+type Tab = "Today" | "Positions" | "History" | "Insights" | "Watchlist" | "Activity";
 
-const tabs: { id: Tab; label: string; icon: typeof Activity }[] = [
-  { id: "Today",     label: "Today",     icon: Sparkles },
-  { id: "Positions", label: "Positions", icon: Target },
-  { id: "History",   label: "History",   icon: Clock },
-  { id: "Insights",  label: "Insights",  icon: TrendingUp },
-  { id: "Watchlist", label: "Watchlist", icon: Eye },
-  { id: "Activity",  label: "Activity",  icon: Activity },
-  { id: "Learn",     label: "Learn",     icon: BookOpen },
+const tabs: { id: Tab; label: string }[] = [
+  { id: "Today",     label: "Today" },
+  { id: "Positions", label: "Positions" },
+  { id: "History",   label: "History" },
+  { id: "Insights",  label: "Insights" },
+  { id: "Watchlist", label: "Watchlist" },
+  { id: "Activity",  label: "Activity" },
 ];
 
 const RANGES: Range[] = ["1D", "1W", "1M", "3M", "6M", "1Y", "ALL"];
+
+function RangeTabs({ value, onChange, className = "" }: { value: Range; onChange: (r: Range) => void; className?: string }) {
+  return (
+    <div className={`inline-flex items-center gap-0.5 bg-muted/60 rounded-full p-1 ${className}`}>
+      {RANGES.map(r => (
+        <button
+          key={r}
+          onClick={() => onChange(r)}
+          className={`px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-[12px] font-semibold transition ${value === r ? "bg-foreground text-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+        >
+          {r}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 function Tip({ text }: { text: string }) {
   return (
