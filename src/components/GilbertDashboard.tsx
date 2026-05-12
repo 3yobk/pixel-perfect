@@ -643,3 +643,150 @@ function ActivityView() {
   );
 }
 
+
+/* -------------------------------- NEWS -------------------------------- */
+
+type NewsItem = {
+  id: number;
+  headline: string;
+  summary: string;
+  source: string;
+  url: string;
+  image: string;
+  datetime: number; // seconds
+  category: string;
+  related: string;
+};
+
+const NEWS_CATEGORIES = ["general", "forex", "crypto", "merger"] as const;
+type NewsCategory = (typeof NEWS_CATEGORIES)[number];
+
+function timeAgo(unixSec: number) {
+  const diff = Math.max(0, Date.now() / 1000 - unixSec);
+  if (diff < 60) return `${Math.floor(diff)}s ago`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)}d ago`;
+}
+
+function NewsView() {
+  const [category, setCategory] = useState<NewsCategory>("general");
+  const [symbol, setSymbol] = useState("");
+  const [query, setQuery] = useState<{ symbol?: string; category: NewsCategory }>({ category: "general" });
+  const [items, setItems] = useState<NewsItem[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setItems(null);
+    setError(null);
+    const params = new URLSearchParams();
+    if (query.symbol) params.set("symbol", query.symbol);
+    else params.set("category", query.category);
+    fetch(`/api/news?${params.toString()}`)
+      .then(r => r.json())
+      .then(d => {
+        if (cancelled) return;
+        if (Array.isArray(d)) setItems(d.slice(0, 50));
+        else setError(d?.error ?? "Failed to load news");
+      })
+      .catch(e => !cancelled && setError(e.message));
+    return () => { cancelled = true; };
+  }, [query]);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h2 className="font-semibold text-lg flex items-center gap-2">
+            <Newspaper className="w-5 h-5 text-primary" /> Live news
+          </h2>
+          <p className="text-[12px] text-muted-foreground">Fresh market headlines, powered by Finnhub.</p>
+        </div>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const sym = symbol.trim().toUpperCase();
+            setQuery(sym ? { symbol: sym, category } : { category });
+          }}
+          className="flex items-center gap-2"
+        >
+          <div className="relative">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <input
+              value={symbol}
+              onChange={(e) => setSymbol(e.target.value)}
+              placeholder="Ticker e.g. AAPL"
+              className="bg-muted/70 border-0 rounded-full pl-9 pr-3 py-2 text-[13px] w-44 placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
+          </div>
+          <button type="submit" className="px-3 py-2 rounded-full bg-foreground text-background text-[12px] font-semibold">Search</button>
+          {query.symbol && (
+            <button type="button" onClick={() => { setSymbol(""); setQuery({ category }); }} className="text-[12px] text-muted-foreground hover:text-foreground">Clear</button>
+          )}
+        </form>
+      </div>
+
+      {!query.symbol && (
+        <div className="flex items-center gap-1 flex-wrap">
+          {NEWS_CATEGORIES.map(c => (
+            <button
+              key={c}
+              onClick={() => { setCategory(c); setQuery({ category: c }); }}
+              className={`px-3 py-1.5 rounded-full text-[12px] font-semibold capitalize transition ${query.category === c ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:text-foreground"}`}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {error && (
+        <div className="soft-card p-4 text-[13px] text-[var(--loss)]">Couldn't load news: {error}</div>
+      )}
+
+      {!items && !error ? (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-48 w-full" />)}
+        </div>
+      ) : items && items.length === 0 ? (
+        <div className="soft-card p-10 text-center text-[13px] text-muted-foreground">No headlines found.</div>
+      ) : (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {items?.map(n => (
+            <a
+              key={n.id}
+              href={n.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="soft-card overflow-hidden flex flex-col hover:bg-accent transition group"
+            >
+              {n.image ? (
+                <div className="aspect-[16/9] bg-muted overflow-hidden">
+                  <img src={n.image} alt="" loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />
+                </div>
+              ) : (
+                <div className="aspect-[16/9] bg-gradient-to-br from-muted to-elevated flex items-center justify-center">
+                  <Newspaper className="w-8 h-8 text-muted-foreground" />
+                </div>
+              )}
+              <div className="p-4 flex-1 flex flex-col gap-2">
+                <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                  <span className="font-semibold uppercase tracking-wide truncate">{n.source}</span>
+                  <span>·</span>
+                  <span>{timeAgo(n.datetime)}</span>
+                  {n.related && <Pill tone="info">{n.related.split(",")[0]}</Pill>}
+                </div>
+                <h3 className="font-semibold text-[14px] leading-snug line-clamp-3">{n.headline}</h3>
+                {n.summary && <p className="text-[12px] text-muted-foreground line-clamp-3">{n.summary}</p>}
+                <div className="mt-auto flex items-center gap-1 text-[11px] text-primary font-semibold pt-1">
+                  Read more <ExternalLink className="w-3 h-3" />
+                </div>
+              </div>
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
