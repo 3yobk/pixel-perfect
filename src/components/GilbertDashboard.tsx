@@ -483,11 +483,19 @@ function HistoryView() {
 /* ------------------------------ INSIGHTS ------------------------------ */
 
 function InsightsView() {
-  const { data: winrate } = useWinRateByTicker();
-  const { data: exits } = useExitReasons();
-  const { data: stats } = useStats();
+  const [range, setRange] = useState<Range>("1M");
+  const { data: winrate } = useWinRateByTicker(range);
+  const { data: exits } = useExitReasons(range);
+  const { data: stats } = useStats(range);
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h2 className="font-semibold text-lg">Insights</h2>
+          <p className="text-[12px] text-muted-foreground">{labelFor(range)}</p>
+        </div>
+        <RangeTabs value={range} onChange={setRange} />
+      </div>
       <div className="grid lg:grid-cols-2 gap-6">
         <div className="soft-card p-5">
           <div className="flex items-center gap-2 mb-3"><h2 className="font-semibold">Win rate by ticker</h2><Tip text="How often trades on each stock end profitable." /></div>
