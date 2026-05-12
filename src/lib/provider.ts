@@ -195,18 +195,18 @@ const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? "";
  * Selected automatically when VITE_DATA_PROVIDER=http is set.
  */
 export const HttpProvider: DataProvider = {
-  async getPortfolioSummary() {
-    const r = await fetch(`${API_BASE}/api/portfolio/summary`); return r.json();
+  async getPortfolioSummary(range = "1D") {
+    const r = await fetch(`${API_BASE}/api/portfolio/summary?range=${range}`); return r.json();
   },
   async getPortfolioSeries(range) {
     const r = await fetch(`${API_BASE}/api/portfolio/series?range=${range}`); return r.json();
   },
-  async getPositions()        { const r = await fetch(`${API_BASE}/api/positions`);     return r.json(); },
-  async getRecentTrades()     { const r = await fetch(`${API_BASE}/api/trades/recent`); return r.json(); },
-  async getStats()            { const r = await fetch(`${API_BASE}/api/stats`);         return r.json(); },
-  async getWinRateByTicker()  { const r = await fetch(`${API_BASE}/api/stats/winrate`); return r.json(); },
-  async getExitReasons()      { const r = await fetch(`${API_BASE}/api/stats/exits`);   return r.json(); },
-  async getWatchlist()        { const r = await fetch(`${API_BASE}/api/watchlist`);     return r.json(); },
+  async getPositions(range)       { const r = await fetch(`${API_BASE}/api/positions${range ? `?range=${range}` : ""}`);   return r.json(); },
+  async getRecentTrades(range = "1D")    { const r = await fetch(`${API_BASE}/api/trades/recent?range=${range}`); return r.json(); },
+  async getStats(range = "1D")           { const r = await fetch(`${API_BASE}/api/stats?range=${range}`);         return r.json(); },
+  async getWinRateByTicker(range = "1D") { const r = await fetch(`${API_BASE}/api/stats/winrate?range=${range}`); return r.json(); },
+  async getExitReasons(range = "1D")     { const r = await fetch(`${API_BASE}/api/stats/exits?range=${range}`);   return r.json(); },
+  async getWatchlist()                   { const r = await fetch(`${API_BASE}/api/watchlist`);                    return r.json(); },
   subscribeScanner(onEntry) {
     const es = new EventSource(`${API_BASE}/api/scanner/stream`);
     es.onmessage = (m) => { try { onEntry(JSON.parse(m.data)); } catch {} };
