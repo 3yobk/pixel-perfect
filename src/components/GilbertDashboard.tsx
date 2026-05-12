@@ -77,6 +77,7 @@ function Skeleton({ className = "" }: { className?: string }) {
 export function GilbertDashboard() {
   const [tab, setTab] = useState<Tab>("Today");
   const [running, setRunning] = useState(true);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [dark, setDark] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     const saved = localStorage.getItem("gilbert-theme");
@@ -92,43 +93,25 @@ export function GilbertDashboard() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* Robinhood-style top nav */}
       <header className="sticky top-0 z-30 bg-panel border-b border-border">
-        <div className="max-w-[1400px] mx-auto px-3 sm:px-6 h-14 sm:h-16 flex md:grid md:grid-cols-[auto_1fr_auto] items-center justify-between gap-3">
-          {/* Left: Logo */}
+        <div className="max-w-[1400px] mx-auto px-3 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setMenuOpen(true)}
+              className="w-9 h-9 rounded-full hover:bg-muted flex items-center justify-center text-foreground"
+              title="Menu"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-[color-mix(in_oklab,var(--primary),white_25%)] flex items-center justify-center shadow-sm">
               <Bot className="w-4 h-4 text-primary-foreground" />
             </div>
             <span className="font-semibold text-[15px] hidden sm:inline">Gilbert</span>
+            <span className="hidden sm:inline text-muted-foreground/40">/</span>
+            <span className="hidden sm:inline text-[14px] font-medium text-muted-foreground">{tab}</span>
           </div>
 
-          {/* Center: nav links (desktop) */}
-          <nav className="hidden md:flex items-center justify-center gap-1">
-            {tabs.map(t => {
-              const active = tab === t.id;
-              return (
-                <button
-                  key={t.id}
-                  onClick={() => setTab(t.id)}
-                  className={`px-3 py-1.5 rounded-full text-[13px] font-medium transition ${active ? "text-foreground bg-muted" : "text-muted-foreground hover:text-foreground hover:bg-muted/60"}`}
-                >
-                  {t.label}
-                </button>
-              );
-            })}
-          </nav>
-
-          {/* Right: search + actions */}
-          <div className="flex items-center gap-1.5 sm:gap-2 justify-end">
-            <div className="relative hidden lg:block w-64">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder="Search…"
-                className="w-full bg-muted/70 border-0 rounded-full pl-9 pr-3 py-2 text-[13px] placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
-              />
-            </div>
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <button
               onClick={() => setRunning(r => !r)}
               title={running ? "Pause bot" : "Resume bot"}
@@ -137,7 +120,6 @@ export function GilbertDashboard() {
               {running ? <PauseCircle className="w-3.5 h-3.5" /> : <PlayCircle className="w-3.5 h-3.5" />}
               {running ? "Running" : "Paused"}
             </button>
-            {/* Mobile: tiny status dot */}
             <button
               onClick={() => setRunning(r => !r)}
               title={running ? "Running" : "Paused"}
@@ -160,23 +142,46 @@ export function GilbertDashboard() {
             </button>
           </div>
         </div>
-
-        {/* Mobile nav row — wraps so no horizontal scroll */}
-        <div className="md:hidden max-w-[1400px] mx-auto px-2 pb-1 flex flex-wrap items-center justify-center gap-1 border-t border-border">
-          {tabs.map(t => {
-            const active = tab === t.id;
-            return (
-              <button
-                key={t.id}
-                onClick={() => setTab(t.id)}
-                className={`px-2.5 py-2 text-[12px] font-medium rounded-full transition ${active ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"}`}
-              >
-                {t.label}
-              </button>
-            );
-          })}
-        </div>
       </header>
+
+      {menuOpen && (
+        <div className="fixed inset-0 z-50" onClick={() => setMenuOpen(false)}>
+          <div className="absolute inset-0 bg-black/50" />
+          <aside
+            onClick={(e) => e.stopPropagation()}
+            className="absolute left-0 top-0 h-full w-[78%] max-w-[320px] bg-panel border-r border-border shadow-xl flex flex-col"
+          >
+            <div className="h-14 sm:h-16 px-4 flex items-center justify-between border-b border-border">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-[color-mix(in_oklab,var(--primary),white_25%)] flex items-center justify-center">
+                  <Bot className="w-4 h-4 text-primary-foreground" />
+                </div>
+                <span className="font-semibold">Gilbert</span>
+              </div>
+              <button
+                onClick={() => setMenuOpen(false)}
+                className="w-9 h-9 rounded-full hover:bg-muted flex items-center justify-center"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <nav className="p-3 flex flex-col gap-1">
+              {tabs.map(t => {
+                const active = tab === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => { setTab(t.id); setMenuOpen(false); }}
+                    className={`text-left px-4 py-3 rounded-xl text-[14px] font-medium transition ${active ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"}`}
+                  >
+                    {t.label}
+                  </button>
+                );
+              })}
+            </nav>
+          </aside>
+        </div>
+      )}
 
       <main className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6 space-y-6">
         {tab === "Today"     && <TodayView running={running} />}
