@@ -380,15 +380,21 @@ function StatCard({ label, value, tone, sub, tip }: {
 /* ------------------------------ POSITIONS ------------------------------ */
 
 function PositionsView() {
-  const { data: positions } = usePositions();
+  const [range, setRange] = useState<Range>("1D");
+  const { data: positions } = usePositions(range);
   return (
     <div className="soft-card p-5">
-      <div className="flex items-center gap-2 mb-1">
-        <h2 className="font-semibold">Open positions</h2>
-        <Tip text="Each row is a trade Gilbert has opened and is still managing." />
+      <div className="flex items-start sm:items-center gap-3 flex-col sm:flex-row sm:justify-between mb-1">
+        <div className="flex items-center gap-2">
+          <h2 className="font-semibold">Open positions</h2>
+          <Tip text="Trades Gilbert has opened and is still managing." />
+        </div>
+        <RangeTabs value={range} onChange={setRange} />
       </div>
-      <p className="text-[12px] text-muted-foreground mb-4">The bot will close these automatically when conditions are met.</p>
-      {!positions ? <Skeleton className="h-40 w-full" /> : (
+      <p className="text-[12px] text-muted-foreground mb-4">{labelFor(range)} — {positions?.length ?? 0} open</p>
+      {!positions ? <Skeleton className="h-40 w-full" /> : positions.length === 0 ? (
+        <div className="text-center py-10 text-[13px] text-muted-foreground">No open positions for this range.</div>
+      ) : (
       <div className="overflow-x-auto">
         <table className="w-full text-[13px]">
           <thead>
