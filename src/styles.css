@@ -67,26 +67,33 @@
 }
 
 .dark {
-  /* dark mode kept identical to light editorial — single theme app */
-  --background: #F9F7F2;
-  --foreground: #1C1C1C;
-  --panel: #FDFCF8;
-  --elevated: #F2EFE8;
-  --border: #1C1C1C;
-  --muted: #F2EFE8;
-  --muted-foreground: rgba(28, 28, 28, 0.55);
-  --primary: #1C1C1C;
-  --primary-foreground: #F9F7F2;
-  --accent: #F2EFE8;
-  --accent-foreground: #1C1C1C;
-  --gain: #047857;
-  --gain-soft: rgba(4, 120, 87, 0.10);
-  --loss: #b1322f;
-  --loss-soft: rgba(177, 50, 47, 0.10);
-  --warn: #b07d1a;
-  --warn-soft: rgba(176, 125, 26, 0.12);
-  --info-soft: rgba(28, 28, 28, 0.05);
+  /* Dark editorial — warm ink-black paper, bone text, same accent system */
+  --background: #14130F;
+  --foreground: #F2EEE3;
+  --panel: #1B1A15;
+  --elevated: #23211B;
+  --border: #F2EEE3;
+  --muted: #23211B;
+  --muted-foreground: rgba(242, 238, 227, 0.55);
+  --primary: #F2EEE3;
+  --primary-foreground: #14130F;
+  --accent: #23211B;
+  --accent-foreground: #F2EEE3;
+  --gain: #4ade80;
+  --gain-soft: rgba(74, 222, 128, 0.12);
+  --loss: #f87171;
+  --loss-soft: rgba(248, 113, 113, 0.12);
+  --warn: #f5b400;
+  --warn-soft: rgba(245, 180, 0, 0.14);
+  --info-soft: rgba(242, 238, 227, 0.06);
 }
+
+.dark body {
+  background-color: #14130F !important;
+  background-image: radial-gradient(rgba(242,238,227,0.06) 1px, transparent 1px) !important;
+  background-size: 22px 22px !important;
+}
+
 
 @layer base {
   html, body, #root {
