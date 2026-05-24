@@ -620,6 +620,80 @@ function labelFor(r: Range) {
   return ({ "1D": "Today", "1W": "Past week", "1M": "Past month", "3M": "Past 3 months", "6M": "Past 6 months", "1Y": "Past year", "ALL": "All time" } as const)[r];
 }
 
+function NewsTicker({ cash }: { cash: string }) {
+  const [items, setItems] = useState<Array<{ headline: string; source: string; url: string }>>([]);
+  const [idx, setIdx] = useState(0);
+  const [phase, setPhase] = useState<"in" | "out">("in");
+
+  useEffect(() => {
+    let alive = true;
+    const load = () => {
+      fetch("/api/news?category=general")
+        .then(r => r.json())
+        .then((d: Array<{ headline: string; source: string; url: string }>) => {
+          if (!alive || !Array.isArray(d)) return;
+          const clean = d.filter(n => n.headline).slice(0, 20);
+          if (clean.length) setItems(clean);
+        })
+        .catch(() => {});
+    };
+    load();
+    const r = setInterval(load, 5 * 60_000); // refresh every 5 min
+    return () => { alive = false; clearInterval(r); };
+  }, []);
+
+  useEffect(() => {
+    if (items.length < 2) return;
+    const tick = setInterval(() => {
+      setPhase("out");
+      setTimeout(() => {
+        setIdx(i => (i + 1) % items.length);
+        setPhase("in");
+      }, 600); // fade-out before swap
+    }, 8000); // ~8s per headline — slow rotation
+    return () => clearInterval(tick);
+  }, [items.length]);
+
+  const current = items[idx];
+
+  return (
+    <div className="soft-card p-5 flex flex-col gap-4">
+      <div>
+        <div className="flex items-center gap-2 mb-3 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+          <Newspaper className="w-3.5 h-3.5" /> Live market news
+        </div>
+        <div className="min-h-[110px] relative">
+          {current ? (
+            <a
+              href={current.url || "#"}
+              target="_blank"
+              rel="noreferrer"
+              className={`block transition-opacity duration-500 ${phase === "in" ? "opacity-100" : "opacity-0"}`}
+            >
+              <p className="font-serif-display text-xl sm:text-2xl leading-snug">
+                {current.headline}
+              </p>
+              <p className="mt-3 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                {current.source}{current.url ? " · read →" : ""}
+              </p>
+            </a>
+          ) : (
+            <p className="font-mono text-[11px] text-muted-foreground">Loading headlines…</p>
+          )}
+        </div>
+      </div>
+      <div className="border-t border-foreground pt-4">
+        <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Cash available</div>
+        <div className="font-serif-display text-2xl">{cash}</div>
+      </div>
+    </div>
+  );
+}
+
+// placeholder removed below
+function _labelForUnused() { return null;
+
+
 function StatCard({ label, value, tone, sub, tip }: {
   label: string; value: string; tone: "gain" | "loss" | "info" | "muted"; sub: string; tip: string;
 }) {
