@@ -179,39 +179,44 @@ function RangeTabs({
   );
 }
 
-/** Creative Gilbert wordmark/logo. */
+/** Creative Gilbert wordmark/logo with cyber-emerald glow. */
 function GilbertLogo({ size = 32 }: { size?: number }) {
   return (
-    <div
-      className="relative rounded-xl flex items-center justify-center shadow-md"
-      style={{
-        width: size, height: size,
-        background: "linear-gradient(135deg, var(--primary), color-mix(in oklab, var(--primary), white 35%))",
-      }}
-    >
-      <svg viewBox="0 0 24 24" width={size * 0.65} height={size * 0.65} fill="none">
-        {/* Stylised G with rising candle/arrow */}
-        <path
-          d="M15 5.5a7 7 0 1 0 5 11.9V13h-5"
-          stroke="var(--primary-foreground)"
-          strokeWidth="2.2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M8 16.5l2.5-3 2 2L16 11"
-          stroke="var(--primary-foreground)"
-          strokeWidth="1.6"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          opacity="0.85"
-        />
-        <circle cx="16" cy="11" r="1.1" fill="var(--primary-foreground)" />
-      </svg>
-      <span
-        className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full"
-        style={{ background: "var(--gain)", boxShadow: "0 0 0 2px var(--panel)" }}
+    <div className="relative" style={{ width: size, height: size }}>
+      <div
+        className="absolute inset-0 rounded-xl blur-md opacity-60"
+        style={{ background: "var(--primary)" }}
       />
+      <div
+        className="relative w-full h-full rounded-xl flex items-center justify-center"
+        style={{
+          background: "linear-gradient(135deg, var(--primary), color-mix(in oklab, var(--primary), white 25%))",
+          boxShadow: "0 0 18px -2px color-mix(in oklab, var(--primary) 60%, transparent), inset 0 1px 0 rgba(255,255,255,0.3)",
+        }}
+      >
+        <svg viewBox="0 0 24 24" width={size * 0.62} height={size * 0.62} fill="none">
+          <path
+            d="M15 5.5a7 7 0 1 0 5 11.9V13h-5"
+            stroke="var(--primary-foreground)"
+            strokeWidth="2.4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M8 16.5l2.5-3 2 2L16 11"
+            stroke="var(--primary-foreground)"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            opacity="0.9"
+          />
+          <circle cx="16" cy="11" r="1.2" fill="var(--primary-foreground)" />
+        </svg>
+        <span
+          className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full pulse-green"
+          style={{ background: "var(--gain)", boxShadow: "0 0 8px var(--gain), 0 0 0 2px var(--background)" }}
+        />
+      </div>
     </div>
   );
 }
