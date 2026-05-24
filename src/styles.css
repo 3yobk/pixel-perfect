@@ -38,51 +38,54 @@
   --color-input: var(--border);
   --color-ring: var(--primary);
 
-  --font-mono: 'JetBrains Mono', 'SF Mono', ui-monospace, monospace;
+  --font-mono: 'IBM Plex Mono', 'SF Mono', ui-monospace, monospace;
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-serif: 'Instrument Serif', 'Times New Roman', Georgia, serif;
 }
 
+/* Warm editorial terminal — bone paper, ink, emerald accent */
 :root {
-  --background: #f7f8fb;
-  --foreground: #1a1f2e;
-  --panel: #ffffff;
-  --elevated: #f1f3f8;
-  --border: #e6e8ef;
-  --muted: #f1f3f8;
-  --muted-foreground: #6b7185;
-  --primary: #5b8def;
-  --primary-foreground: #ffffff;
-  --accent: #eef3ff;
-  --accent-foreground: #1a1f2e;
-  --gain: #16a374;
-  --gain-soft: #e6f6ef;
-  --loss: #e5484d;
-  --loss-soft: #fdecec;
-  --warn: #d99e2b;
-  --warn-soft: #fdf4e0;
-  --info-soft: #eaf2ff;
-  --radius: 12px;
+  --background: #F9F7F2;
+  --foreground: #1C1C1C;
+  --panel: #FDFCF8;
+  --elevated: #F2EFE8;
+  --border: #1C1C1C;
+  --muted: #F2EFE8;
+  --muted-foreground: rgba(28, 28, 28, 0.55);
+  --primary: #1C1C1C;
+  --primary-foreground: #F9F7F2;
+  --accent: #F2EFE8;
+  --accent-foreground: #1C1C1C;
+  --gain: #047857;
+  --gain-soft: rgba(4, 120, 87, 0.10);
+  --loss: #b1322f;
+  --loss-soft: rgba(177, 50, 47, 0.10);
+  --warn: #b07d1a;
+  --warn-soft: rgba(176, 125, 26, 0.12);
+  --info-soft: rgba(28, 28, 28, 0.05);
+  --radius: 4px;
 }
 
 .dark {
-  --background: #020202;
-  --foreground: #f4f7f5;
-  --panel: rgba(255, 255, 255, 0.04);
-  --elevated: rgba(255, 255, 255, 0.06);
-  --border: rgba(255, 255, 255, 0.10);
-  --muted: rgba(255, 255, 255, 0.05);
-  --muted-foreground: rgba(255, 255, 255, 0.55);
-  --primary: #10b981;
-  --primary-foreground: #04150f;
-  --accent: rgba(16, 185, 129, 0.10);
-  --accent-foreground: #ecfdf5;
-  --gain: #34d399;
-  --gain-soft: rgba(52, 211, 153, 0.12);
-  --loss: #ef4444;
-  --loss-soft: rgba(239, 68, 68, 0.12);
-  --warn: #f5b400;
-  --warn-soft: rgba(245, 180, 0, 0.14);
-  --info-soft: rgba(16, 185, 129, 0.10);
+  /* dark mode kept identical to light editorial — single theme app */
+  --background: #F9F7F2;
+  --foreground: #1C1C1C;
+  --panel: #FDFCF8;
+  --elevated: #F2EFE8;
+  --border: #1C1C1C;
+  --muted: #F2EFE8;
+  --muted-foreground: rgba(28, 28, 28, 0.55);
+  --primary: #1C1C1C;
+  --primary-foreground: #F9F7F2;
+  --accent: #F2EFE8;
+  --accent-foreground: #1C1C1C;
+  --gain: #047857;
+  --gain-soft: rgba(4, 120, 87, 0.10);
+  --loss: #b1322f;
+  --loss-soft: rgba(177, 50, 47, 0.10);
+  --warn: #b07d1a;
+  --warn-soft: rgba(176, 125, 26, 0.12);
+  --info-soft: rgba(28, 28, 28, 0.05);
 }
 
 @layer base {
@@ -94,34 +97,23 @@
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
   }
+  body {
+    background-color: #F9F7F2;
+    background-image:
+      radial-gradient(rgba(28,28,28,0.06) 1px, transparent 1px);
+    background-size: 22px 22px;
+    background-attachment: fixed;
+  }
   * { border-color: var(--color-border); }
   .font-num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
-
-  /* Cyber-terminal ambient background — fixed glow blobs + faint grid */
-  .dark body {
-    background-color: #020202;
-    background-image:
-      radial-gradient(60% 50% at 10% -5%, rgba(16, 185, 129, 0.10), transparent 60%),
-      radial-gradient(45% 40% at 105% 110%, rgba(239, 68, 68, 0.05), transparent 60%),
-      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
-    background-size: auto, auto, 44px 44px, 44px 44px;
-    background-attachment: fixed, fixed, fixed, fixed;
-  }
+  .font-serif-display { font-family: var(--font-serif); font-weight: 500; letter-spacing: -0.01em; }
 }
 
 @utility soft-card {
   background-color: var(--color-panel);
   border: 1px solid var(--color-border);
-  border-radius: 18px;
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-}
-.dark .soft-card {
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.04) inset,
-    0 20px 60px -30px rgba(0, 0, 0, 0.8);
+  border-radius: 4px;
+  box-shadow: 3px 3px 0 0 var(--color-foreground);
 }
 
 @utility chip {
@@ -129,14 +121,18 @@
   align-items: center;
   gap: 4px;
   padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 11px;
+  border: 1px solid var(--color-border);
+  border-radius: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
   font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 @keyframes pulse-dot {
-  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(22, 163, 116, 0.5); }
-  50% { opacity: 0.85; box-shadow: 0 0 0 6px rgba(22, 163, 116, 0); }
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(4, 120, 87, 0.5); }
+  50% { opacity: 0.85; box-shadow: 0 0 0 6px rgba(4, 120, 87, 0); }
 }
 .pulse-green { animation: pulse-dot 2s infinite; }
 
