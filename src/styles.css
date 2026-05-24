@@ -65,24 +65,24 @@
 }
 
 .dark {
-  --background: #000000;
-  --foreground: #f5f7fa;
-  --panel: #0a0a0a;
-  --elevated: #141414;
-  --border: #1f1f1f;
-  --muted: #161616;
-  --muted-foreground: #8a8f9c;
-  --primary: #00c805;
-  --primary-foreground: #000000;
-  --accent: #181818;
-  --accent-foreground: #f5f7fa;
-  --gain: #00c805;
-  --gain-soft: rgba(0, 200, 5, 0.14);
-  --loss: #ff5000;
-  --loss-soft: rgba(255, 80, 0, 0.14);
+  --background: #020202;
+  --foreground: #f4f7f5;
+  --panel: rgba(255, 255, 255, 0.04);
+  --elevated: rgba(255, 255, 255, 0.06);
+  --border: rgba(255, 255, 255, 0.10);
+  --muted: rgba(255, 255, 255, 0.05);
+  --muted-foreground: rgba(255, 255, 255, 0.55);
+  --primary: #10b981;
+  --primary-foreground: #04150f;
+  --accent: rgba(16, 185, 129, 0.10);
+  --accent-foreground: #ecfdf5;
+  --gain: #34d399;
+  --gain-soft: rgba(52, 211, 153, 0.12);
+  --loss: #ef4444;
+  --loss-soft: rgba(239, 68, 68, 0.12);
   --warn: #f5b400;
   --warn-soft: rgba(245, 180, 0, 0.14);
-  --info-soft: rgba(0, 200, 5, 0.10);
+  --info-soft: rgba(16, 185, 129, 0.10);
 }
 
 @layer base {
@@ -95,16 +95,34 @@
     -webkit-font-smoothing: antialiased;
   }
   * { border-color: var(--color-border); }
-  .font-num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  .font-num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+
+  /* Cyber-terminal ambient background — fixed glow blobs + faint grid */
+  .dark body {
+    background-color: #020202;
+    background-image:
+      radial-gradient(60% 50% at 10% -5%, rgba(16, 185, 129, 0.10), transparent 60%),
+      radial-gradient(45% 40% at 105% 110%, rgba(239, 68, 68, 0.05), transparent 60%),
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: auto, auto, 44px 44px, 44px 44px;
+    background-attachment: fixed, fixed, fixed, fixed;
+  }
 }
 
 @utility soft-card {
   background-color: var(--color-panel);
   border: 1px solid var(--color-border);
-  border-radius: 16px;
+  border-radius: 18px;
   box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
 }
-.dark .soft-card { box-shadow: none; }
+.dark .soft-card {
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.04) inset,
+    0 20px 60px -30px rgba(0, 0, 0, 0.8);
+}
 
 @utility chip {
   display: inline-flex;
