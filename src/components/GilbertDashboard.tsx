@@ -43,12 +43,12 @@ const CUSTOM_RANGES: Range[] = ["3M", "6M", "ALL"];
 /** Full range bar (Today / portfolio chart) — every preset visible inline. */
 function FullRangeTabs({ value, onChange, className = "" }: { value: Range; onChange: (r: Range) => void; className?: string }) {
   return (
-    <div className={`inline-flex items-center gap-0.5 bg-muted/60 rounded-full p-1 flex-wrap justify-center ${className}`}>
+    <div className={`inline-flex items-center gap-1 flex-wrap justify-center ${className}`}>
       {FULL_RANGES.map(r => (
         <button
           key={r}
           onClick={() => onChange(r)}
-          className={`px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-[12px] font-semibold transition ${value === r ? "bg-foreground text-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+          className={`px-2.5 py-1 border border-foreground font-mono text-[10px] uppercase tracking-widest transition ${value === r ? "bg-foreground text-background" : "text-foreground hover:bg-foreground hover:text-background"}`}
         >
           {r}
         </button>
@@ -56,6 +56,7 @@ function FullRangeTabs({ value, onChange, className = "" }: { value: Range; onCh
     </div>
   );
 }
+
 
 /** Compact range bar w/ Custom popover (dates + 3M/6M/ALL). */
 function RangeTabs({
@@ -182,44 +183,26 @@ function RangeTabs({
 /** Creative Gilbert wordmark/logo with cyber-emerald glow. */
 function GilbertLogo({ size = 32 }: { size?: number }) {
   return (
-    <div className="relative" style={{ width: size, height: size }}>
-      <div
-        className="absolute inset-0 rounded-xl blur-md opacity-60"
-        style={{ background: "var(--primary)" }}
+    <div
+      className="relative flex items-center justify-center font-mono font-bold"
+      style={{
+        width: size,
+        height: size,
+        background: "var(--foreground)",
+        color: "var(--background)",
+        fontSize: size * 0.55,
+        lineHeight: 1,
+      }}
+    >
+      G
+      <span
+        className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full pulse-green"
+        style={{ background: "var(--gain)", boxShadow: "0 0 6px var(--gain)" }}
       />
-      <div
-        className="relative w-full h-full rounded-xl flex items-center justify-center"
-        style={{
-          background: "linear-gradient(135deg, var(--primary), color-mix(in oklab, var(--primary), white 25%))",
-          boxShadow: "0 0 18px -2px color-mix(in oklab, var(--primary) 60%, transparent), inset 0 1px 0 rgba(255,255,255,0.3)",
-        }}
-      >
-        <svg viewBox="0 0 24 24" width={size * 0.62} height={size * 0.62} fill="none">
-          <path
-            d="M15 5.5a7 7 0 1 0 5 11.9V13h-5"
-            stroke="var(--primary-foreground)"
-            strokeWidth="2.4"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M8 16.5l2.5-3 2 2L16 11"
-            stroke="var(--primary-foreground)"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            opacity="0.9"
-          />
-          <circle cx="16" cy="11" r="1.2" fill="var(--primary-foreground)" />
-        </svg>
-        <span
-          className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full pulse-green"
-          style={{ background: "var(--gain)", boxShadow: "0 0 8px var(--gain), 0 0 0 2px var(--background)" }}
-        />
-      </div>
     </div>
   );
 }
+
 
 function Tip({ text }: { text: string }) {
   return (
@@ -493,34 +476,30 @@ function TodayView({ running }: { running: boolean }) {
   return (
     <div className="space-y-6">
       {/* Welcome */}
-      <div className="soft-card p-5 sm:p-6 bg-gradient-to-br from-[var(--info-soft)] to-panel">
-        <div className="flex items-start gap-4">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-            <Sparkles className="w-5 h-5 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-lg sm:text-xl font-semibold">Good day! Here's what Gilbert is up to.</h1>
-            <p className="text-[13px] text-muted-foreground mt-1">
-              {running ? "I'm scanning the market and managing your trades." : "I'm paused — press the button up top to start scanning again."}
-            </p>
-          </div>
-        </div>
+      <div className="pb-2">
+        <h1 className="font-serif-display text-3xl sm:text-5xl leading-tight">
+          Good day! Here's what <span className="italic">Gilbert</span> is up to.
+        </h1>
+        <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground mt-2">
+          {running ? "Scanning the market / Managing active trades" : "Paused — press resume up top to start scanning again"}
+        </p>
       </div>
 
-      {/* Portfolio chart card — Robinhood style */}
+      {/* Portfolio chart card */}
       <div className="soft-card p-5 sm:p-6">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <div className="flex items-center gap-2 text-[12px] text-muted-foreground">
+            <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
               Portfolio value <Tip text="Total value of your account, updated live." />
             </div>
             {sumLoading || !rangeStats ? (
-              <Skeleton className="h-9 w-48 mt-2" />
+              <Skeleton className="h-12 w-56 mt-2" />
             ) : (
-              <div className="text-3xl sm:text-4xl font-semibold font-num mt-1 tracking-tight">
+              <div className="font-serif-display text-4xl sm:text-6xl mt-1 tracking-tight">
                 {fmtMoney(portfolioNow)}
               </div>
             )}
+
             {rangeStats && (
               <div className={`mt-1 flex items-center gap-2 text-[13px] font-medium ${positive ? "text-[var(--gain)]" : "text-[var(--loss)]"}`}>
                 {positive ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
@@ -657,15 +636,19 @@ function labelFor(r: Range) {
 function StatCard({ label, value, tone, sub, tip }: {
   label: string; value: string; tone: "gain" | "loss" | "info" | "muted"; sub: string; tip: string;
 }) {
-  const accent = { gain: "text-[var(--gain)]", loss: "text-[var(--loss)]", info: "text-primary", muted: "text-foreground" }[tone];
+  const accent = { gain: "bg-[var(--gain)]", loss: "bg-[var(--loss)]", info: "bg-foreground", muted: "bg-foreground" }[tone];
   return (
-    <div className="soft-card p-4">
-      <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground">{label} <Tip text={tip} /></div>
-      <div className={`mt-1.5 text-2xl font-semibold font-num ${accent}`}>{value}</div>
-      <div className="text-[11px] text-muted-foreground mt-0.5">{sub}</div>
+    <div className="border-t-2 border-foreground pt-3 px-1">
+      <div className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{label} <Tip text={tip} /></div>
+      <div className="mt-2 flex items-end gap-3">
+        <span className="font-serif-display text-3xl sm:text-4xl leading-none">{value}</span>
+        <span className={`flex-1 h-[2px] mb-2 opacity-40 ${accent}`} />
+      </div>
+      <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground mt-2">{sub}</div>
     </div>
   );
 }
+
 
 /* ------------------------------ POSITIONS ------------------------------ */
 
