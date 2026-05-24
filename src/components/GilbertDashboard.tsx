@@ -609,21 +609,8 @@ function TodayView({ running }: { running: boolean }) {
           </div>
         </div>
 
-        <div className="soft-card p-5 flex flex-col gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <Zap className="w-4 h-4 text-[var(--warn)]" />
-              <h2 className="font-semibold">Beginner tip</h2>
-            </div>
-            <p className="text-[13px] text-muted-foreground">
-              A "stop loss" auto-closes a trade once it loses a set amount, so you can't lose more than you planned. Gilbert sets one on every trade.
-            </p>
-          </div>
-          <div className="border-t border-border pt-4">
-            <div className="text-[12px] text-muted-foreground mb-1">Cash available</div>
-            <div className="text-xl font-semibold font-num">{summary ? fmtMoney(summary.cash) : "—"}</div>
-          </div>
-        </div>
+        <NewsTicker cash={summary ? fmtMoney(summary.cash) : "—"} />
+
       </div>
     </div>
   );
