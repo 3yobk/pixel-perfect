@@ -690,8 +690,8 @@ function NewsTicker({ cash }: { cash: string }) {
   );
 }
 
-// placeholder removed below
-function _labelForUnused() { return null;
+
+
 
 
 function StatCard({ label, value, tone, sub, tip }: {
